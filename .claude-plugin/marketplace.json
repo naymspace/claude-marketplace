@@ -1,0 +1,15 @@
+{
+    "name": "naymspace-marketplace",
+    "owner": { "name": "Naymspace", "email": "info@naymspace.de" },
+    "plugins": [
+      {
+        "name": "elixir-genius",
+        "source": {
+          "source": "url",
+          "url": "https://gitlab.naymspace.de/claude/naymspace-marketplace/plugins/elixir-genius"
+        },
+        "version": "1.0.0",
+        "description": "Elixir best practices"
+      }
+    ]
+  }
