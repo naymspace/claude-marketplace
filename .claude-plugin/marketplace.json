@@ -4,10 +4,7 @@
     "plugins": [
       {
         "name": "elixir-genius",
-        "source": {
-          "source": "url",
-          "url": "https://gitlab.naymspace.de/claude/marketplace/plugins/elixir-genius"
-        },
+        "source": "./plugins/elixir-genius",
         "version": "1.0.0",
         "description": "Elixir best practices"
       }
