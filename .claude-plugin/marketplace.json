@@ -1,5 +1,5 @@
 {
-    "name": "marketplace",
+    "name": "naymspace-marketplace",
     "owner": { "name": "Naymspace", "email": "info@naymspace.de" },
     "plugins": [
       {
