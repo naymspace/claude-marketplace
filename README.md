@@ -88,3 +88,11 @@ plugins/
     plugin.json
     SKILL.md
 ```
+
+## Publishing an Update
+
+To release a new version of an existing plugin:
+
+1. **Update the plugin files** — Edit `SKILL.md` and/or `plugin.json` under `plugins/<plugin-name>/`
+2. **Bump the version** in `plugin.json` (e.g. `"version": "1.0.0"` → `"version": "1.1.0"`)
+3. **Commit and push** to `main`
