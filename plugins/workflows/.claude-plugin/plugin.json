@@ -1,0 +1,6 @@
+{
+    "name": "workflows",
+    "version": "1.0.0",
+    "description": "Development workflow skills for Claude Code",
+    "author": { "name": "Florian Arens" }
+  }
