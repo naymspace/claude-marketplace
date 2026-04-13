@@ -2,6 +2,5 @@
     "name": "elixir-genius",
     "version": "1.0.0",
     "description": "Elixir best practices",
-    "author": { "name": "Simon Hansen" },
-    "skills": ["./"]
+    "author": { "name": "Simon Hansen" }
   }
