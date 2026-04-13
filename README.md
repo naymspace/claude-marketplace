@@ -7,6 +7,7 @@ A collection of Claude Code plugins maintained by Naymspace.
 | Plugin | Description |
 |--------|-------------|
 | **elixir-genius** | Elixir/Phoenix/LiveView best practices, architecture patterns, and OTP guidance |
+| **workflows** | Development workflow skills |
 
 ## Usage
 
