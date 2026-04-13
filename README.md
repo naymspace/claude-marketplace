@@ -50,7 +50,7 @@ After installation, run `/reload-plugins` to apply the changes.
 
 Each plugin lives in its own directory under `plugins/` and needs two files:
 
-### `plugin.json`
+### `.claude-plugin/plugin.json`
 
 Defines plugin metadata:
 
@@ -59,23 +59,21 @@ Defines plugin metadata:
   "name": "my-plugin",
   "version": "1.0.0",
   "description": "What the plugin does",
-  "author": { "name": "Your Name" },
-  "skills": ["./"]
+  "author": { "name": "Your Name" }
 }
 ```
 
-### `SKILL.md`
+### `skills/<skill-name>/SKILL.md`
 
 Contains the skill definition with frontmatter and instructions:
 
 ```markdown
 ---
-name: my-plugin
+name: my-skill
 description: When to activate this skill
-allowed-tools: Read, Edit, Write, Glob, Grep, Bash
 ---
 
-# My Plugin
+# My Skill
 
 Instructions and patterns for Claude to follow...
 ```
@@ -85,14 +83,17 @@ Instructions and patterns for Claude to follow...
 ```
 plugins/
   my-plugin/
-    plugin.json
-    SKILL.md
+    .claude-plugin/
+      plugin.json
+    skills/
+      my-skill/
+        SKILL.md
 ```
 
 ## Publishing an Update
 
 To release a new version of an existing plugin:
 
-1. **Update the plugin files** — Edit `SKILL.md` and/or `plugin.json` under `plugins/<plugin-name>/`
-2. **Bump the version** in `plugin.json` (e.g. `"version": "1.0.0"` → `"version": "1.1.0"`)
+1. **Update the plugin files** — Edit files under `plugins/<plugin-name>/`
+2. **Bump the version** in `.claude-plugin/plugin.json` (e.g. `"version": "1.0.0"` → `"version": "1.1.0"`)
 3. **Commit and push** to `main`
