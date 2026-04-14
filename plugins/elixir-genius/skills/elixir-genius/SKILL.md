@@ -802,7 +802,80 @@ defmodule TaskManager.Tasks do
 end
 ```
 
-## Ecto.Multi for Atomic Operations
+## Transactions
+
+### Prefer Repo.transact/2 Over Ecto.Multi
+
+`Ecto.Multi` adds ceremony that obscures intent. For most transactional workflows, `Repo.transact/2` with plain `with` chains is clearer and easier to test:
+
+```elixir
+# Compare with the Multi version in "Ecto.Multi Example" below —
+# same operation, but transact/2 reads like normal Elixir:
+
+defmodule TaskManager.Boundaries.TaskService do
+  alias TaskManager.{Repo, Task}
+  alias TaskManager.Impl.TaskLogic
+
+  def transition_task(task_id, new_status, opts \\ []) do
+    Repo.transact(fn ->
+      with {:ok, task} <- fetch_task(task_id),
+           {:ok, old_status} <- validate_transition(task, new_status),
+           {:ok, task} <- update_status(task, new_status),
+           {:ok, _} <- create_activity_log(task, "status_changed", %{from: old_status, to: new_status}),
+           {:ok, _} <- maybe_notify(task, opts),
+           {:ok, _} <- publish_task_updated(task) do
+        {:ok, task}
+      end
+    end)
+  end
+
+  defp fetch_task(id) do
+    case Repo.get(Task, id) do
+      nil -> {:error, :not_found}
+      task -> {:ok, task}
+    end
+  end
+
+  defp validate_transition(task, new_status) do
+    if TaskLogic.can_transition?(task.status, new_status),
+      do: {:ok, task.status},
+      else: {:error, :invalid_transition}
+  end
+
+  defp update_status(task, new_status) do
+    task |> Task.transition_changeset(%{status: new_status}) |> Repo.update()
+  end
+
+  defp maybe_notify(task, opts) do
+    if opts[:notify], do: send_notification(task.assignee_id, task)
+    {:ok, :done}
+  end
+end
+```
+
+### When Ecto.Multi Still Makes Sense
+
+Reserve `Ecto.Multi` for cases where you genuinely need:
+- **Named step inspection** — introspecting or testing individual steps before execution
+- **Dynamic composition** — building transaction pipelines from runtime data with `Multi.merge/2`
+- **Step-level error identification** — when callers must distinguish *which* step failed
+
+```elixir
+# Multi justified: dynamic pipeline built from runtime config
+def process_order(order, plugins) do
+  base =
+    Multi.new()
+    |> Multi.update(:order, Order.complete_changeset(order))
+
+  plugins
+  |> Enum.reduce(base, fn plugin, multi ->
+    Multi.merge(multi, &plugin.transaction_steps(&1, order))
+  end)
+  |> Repo.transaction()
+end
+```
+
+### Ecto.Multi Example — Complex Atomic Operations
 
 ```elixir
 defmodule TaskManager.Boundaries.TaskService do
