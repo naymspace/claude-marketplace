@@ -476,7 +476,6 @@ Supervisor.init(children,
 ## Preferred Libraries
 
 - **HTTP Client**: Use `Req` (NOT HTTPoison, NOT Tesla, NOT httpc)
-- **LLM Integration**: Use `ReqLLM` for LLM API calls with structured output
 - **Email**: Use `Swoosh` for composing and delivering emails
 - **JSON**: Use the `JSON` module in the core (NOT a libary like Jason or Poison)
 
@@ -547,30 +546,6 @@ defmodule TaskManager.Integration.HTTPClient do
     base = Integer.pow(2, retry_count) * 1_000
     jitter = :rand.uniform(100)
     base + jitter
-  end
-end
-```
-
-## ReqLLM - LLM Integration
-
-```elixir
-defmodule TaskManager.AI.TaskClassifier do
-  @moduledoc """
-  Uses ReqLLM for LLM API calls.
-  """
-
-  def classify_task(description) do
-    prompt = """
-    Classify this task and respond with JSON only:
-    #{description}
-
-    Response format: {"category": "bug|feature|chore|docs", "priority": "low|medium|high|urgent", "estimated_hours": 1-100}
-    """
-
-    with {:ok, response} <- ReqLLM.generate_text("anthropic:claude-sonnet-4-20250514", prompt),
-         {:ok, classified} <- Jason.decode(ReqLLM.Response.text(response)) do
-      {:ok, classified}
-    end
   end
 end
 ```
@@ -1147,7 +1122,6 @@ project_root/
 - **Ecto** - Database wrapper and query generator
 - **PostgreSQL** 16+ - Primary database
 - **Req** - HTTP client (NOT HTTPoison)
-- **ReqLLM** - LLM integration library
 - **Swoosh** - Email composition and delivery
 - **Jason** - JSON encoding/decoding
 - **Tailwind CSS v4** - Utility-first CSS
