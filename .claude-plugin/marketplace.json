@@ -13,6 +13,12 @@
         "source": "./plugins/workflows",
         "version": "1.0.0",
         "description": "Development workflow skills for Claude Code"
+      },
+      {
+        "name": "rails-architecture-basics",
+        "source": "./plugins/rails-architecture-basics",
+        "version": "1.0.0",
+        "description": "Opinionated Rails best-practice skills: architecture patterns, safety tooling, and more."
       }
     ]
   }
