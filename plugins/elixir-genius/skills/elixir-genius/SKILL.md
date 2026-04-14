@@ -266,6 +266,135 @@ Process.get(:key)
 # 3. You're building DSLs that require it
 ```
 
+## Gradual Set-Theoretic Type System (Elixir v1.20+)
+
+### What the Compiler Infers (v1.20+)
+
+The compiler performs **module type inference**: it infers types considering the current module, standard library, and dependencies. Calls to modules within the same project are assumed `dynamic()` during inference, then the whole project is type checked with all inferred types.
+
+```elixir
+# Compiler infers: %{..., age: integer()} -> binary()
+def user_age_to_string(user) do
+  Integer.to_string(user.age)
+end
+
+# Compiler infers: integer(), integer() -> integer()
+# (rem/2 requires integers, so a and b must also be integers)
+def add_rem(a, b) do
+  rem(a + b, 8)
+end
+
+# Guards are fully inferred:
+# Compiler knows x is a list, y is an integer
+def example(x, y) when is_list(x) and is_integer(y), do: {x, y}
+
+# Negative type information from guards:
+# Compiler knows x does NOT have :foo key — x.foo will emit a violation
+def example(x) when not is_map_key(x, :foo), do: x
+```
+
+### Understanding dynamic()
+
+`dynamic()` is NOT like `any()` in other languages. It works as a **range type** that still catches violations:
+
+```elixir
+# dynamic(integer() or float()) passed to a function expecting binary()
+# → type violation! Neither integer() nor float() is binary()
+
+# dynamic(atom() or integer()) passed to Integer.to_string/1
+# → NO warning, because integer() (a subset) is valid
+
+# Even fully dynamic code catches bugs:
+# dynamic() used as integer() then as binary() → violation reported
+```
+
+Key rule: `dynamic()` is always hoisted to the root. `{:ok, dynamic()}` becomes `dynamic({:ok, term()})`. You cannot make part of a data structure gradual — only the whole thing.
+
+### Type Syntax Reference
+
+```elixir
+# Basic types
+atom() | binary() | bitstring() | integer() | float()
+pid() | port() | reference() | function()
+
+# Special types
+none()          # empty set
+term()          # all types
+dynamic()       # gradual range type
+
+# Atoms: individual atoms are types
+:ok | :error | nil | true | false
+boolean()       # alias for: true or false
+
+# Tuples
+tuple()                         # any tuple
+{:ok, binary()}                 # exact two-element tuple
+{:ok, binary(), ...}            # at least two elements
+
+# Lists
+list()                          # any proper list
+list(integer())                 # typed list
+non_empty_list(integer())       # non-empty typed list
+
+# Maps — closed vs open
+%{name: binary(), age: integer()}           # closed: exactly these keys
+%{..., name: binary(), age: integer()}      # open: at least these keys
+%{name: binary(), age: if_set(integer())}   # optional key
+%{..., age: not_set()}                      # key must NOT be present
+
+# Functions
+(integer() -> boolean())                                    # single clause
+(integer() -> integer()) and (boolean() -> boolean())       # multi-clause
+# Note: multi-clause uses intersection (and), not union (or)
+```
+
+### Best Practices for Working with the Type System
+
+```elixir
+# DO: Write precise pattern matches and guards — the compiler uses them
+def process(%User{role: :admin} = user) when is_binary(user.name) do
+  # Compiler knows: user is %User{} with role :admin and name is binary
+  admin_action(user)
+end
+
+# DO: Use specific struct patterns — helps inference propagate types
+def format_address(%Address{street: street, city: city}) do
+  "#{street}, #{city}"
+end
+
+# DO: Match on tagged tuples — compiler tracks return type precisely
+with {:ok, user} <- fetch_user(id),
+     {:ok, account} <- fetch_account(user.account_id) do
+  {:ok, %{user: user, account: account}}
+end
+# Compiler infers return: {:ok, map()} | {:error, dynamic()}
+
+# AVOID: Overly generic function heads that defeat inference
+def process(data) do
+  data.name  # Compiler only knows: %{..., name: dynamic()}
+end
+
+# PREFER: Explicit struct or map pattern for richer type info
+def process(%User{name: name}) do
+  name  # Compiler knows: name comes from User struct definition
+end
+```
+
+### What NOT to Do
+
+```elixir
+# DON'T: Suppress type warnings without understanding them
+# Type warnings are sound — if the compiler says it's wrong, investigate
+
+# DON'T: Use Erlang typespecs (@spec) for new code targeting v1.20+
+# Typespecs will be phased out in favor of set-theoretic type signatures
+# Continue maintaining existing @spec for libraries supporting older versions
+
+# DON'T: Rely on inference for public API guarantees
+# Inference is best-effort — for guarantees, explicit type signatures
+# will be needed (planned for future Elixir releases)
+```
+
 ## Naming Conventions
 
 ### Predicate Functions
