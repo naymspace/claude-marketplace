@@ -1,6 +1,16 @@
 # Naymspace Claude Marketplace
 
-A collection of Claude Code plugins maintained by Naymspace.
+A collection of Claude Code plugins maintained by [Naymspace](https://naymspace.de).
+
+## Repository & Mirror
+
+This repository is a read-only mirror of our internal GitLab project. We use GitLab as our primary development platform — all code reviews, CI/CD pipelines, and team collaboration happen there. The GitLab project is **private** so the team can work freely without exposing work-in-progress.
+
+Since Claude Code plugins are installed via public Git URLs, we need a publicly accessible mirror for distribution. GitHub serves that role: all protected branches (including `main`) are automatically synchronized, ensuring users always have access to the latest released versions of our plugins.
+
+**In short:** GitLab = internal development, GitHub = public distribution.
+
+> **Note:** Issues and pull requests on GitHub are not actively monitored. For feedback, please reach out via email at info@naymspace.de.
 
 ## Available Plugins
 
@@ -16,7 +26,7 @@ A collection of Claude Code plugins maintained by Naymspace.
 Register this marketplace in Claude Code:
 
 ```
-/plugin marketplace add https://gitlab.naymspace.de/claude/marketplace.git
+/plugin marketplace add https://github.com/naymspace/claude-marketplace.git
 ```
 
 ### Installing a Plugin
