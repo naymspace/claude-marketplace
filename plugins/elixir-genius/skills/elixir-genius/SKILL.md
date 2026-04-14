@@ -813,8 +813,9 @@ end
 # same operation, but transact/2 reads like normal Elixir:
 
 defmodule TaskManager.Boundaries.TaskService do
-  alias TaskManager.{Repo, Task}
   alias TaskManager.Impl.TaskLogic
+  alias TaskManager.Repo
+  alias TaskManager.Task
 
   def transition_task(task_id, new_status, opts \\ []) do
     Repo.transact(fn ->
