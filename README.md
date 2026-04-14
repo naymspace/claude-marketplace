@@ -101,6 +101,19 @@ plugins/
         SKILL.md
 ```
 
+### Register in Marketplace
+
+Add your plugin to `.claude-plugin/marketplace.json`:
+
+```json
+{
+  "name": "my-plugin",
+  "source": "./plugins/my-plugin",
+  "version": "1.0.0",
+  "description": "What the plugin does"
+}
+```
+
 ## Publishing an Update
 
 To release a new version of an existing plugin:
