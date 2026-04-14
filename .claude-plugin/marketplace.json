@@ -16,7 +16,7 @@
       },
       {
         "name": "rails-architecture-basics",
-        "source": "./plugins/rails-architecture-basics",
+        "source": "./plugins/rails-basics",
         "version": "1.0.0",
         "description": "Opinionated Rails best-practice skills: architecture patterns, safety tooling, and more."
       }
