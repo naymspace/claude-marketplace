@@ -476,7 +476,7 @@ Supervisor.init(children,
 ## Preferred Libraries
 
 - **HTTP Client**: Use `Req` (NOT HTTPoison, NOT Tesla, NOT httpc)
-- **LLM Integration**: Use `ReqLLM` + `Zoi` for LLM API calls with structured output
+- **LLM Integration**: Use `ReqLLM` for LLM API calls with structured output
 - **Email**: Use `Swoosh` for composing and delivering emails
 - **JSON**: Use the `JSON` module in the core (NOT a libary like Jason or Poison)
 
@@ -556,14 +556,8 @@ end
 ```elixir
 defmodule TaskManager.AI.TaskClassifier do
   @moduledoc """
-  Uses ReqLLM for LLM API calls with Zoi for validation.
+  Uses ReqLLM for LLM API calls.
   """
-
-  @classification_schema Zoi.object(%{
-    category: Zoi.enum([:bug, :feature, :chore, :docs]),
-    priority: Zoi.enum([:low, :medium, :high, :urgent]),
-    estimated_hours: Zoi.integer() |> Zoi.min(1) |> Zoi.max(100)
-  })
 
   def classify_task(description) do
     prompt = """
@@ -574,9 +568,8 @@ defmodule TaskManager.AI.TaskClassifier do
     """
 
     with {:ok, response} <- ReqLLM.generate_text("anthropic:claude-sonnet-4-20250514", prompt),
-         {:ok, json} <- Jason.decode(ReqLLM.Response.text(response)),
-         {:ok, validated} <- Zoi.parse(@classification_schema, json) do
-      {:ok, validated}
+         {:ok, classified} <- Jason.decode(ReqLLM.Response.text(response)) do
+      {:ok, classified}
     end
   end
 end
@@ -1155,7 +1148,6 @@ project_root/
 - **PostgreSQL** 16+ - Primary database
 - **Req** - HTTP client (NOT HTTPoison)
 - **ReqLLM** - LLM integration library
-- **Zoi** - Runtime data validation
 - **Swoosh** - Email composition and delivery
 - **Jason** - JSON encoding/decoding
 - **Tailwind CSS v4** - Utility-first CSS
