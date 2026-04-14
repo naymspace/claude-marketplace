@@ -7,6 +7,12 @@
         "source": "./plugins/elixir-genius",
         "version": "1.0.0",
         "description": "Elixir best practices"
+      },
+      {
+        "name": "workflows",
+        "source": "./plugins/workflows",
+        "version": "1.0.0",
+        "description": "Development workflow skills for Claude Code"
       }
     ]
   }
