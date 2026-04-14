@@ -1,0 +1,12 @@
+{
+  "name": "rails-basics",
+  "version": "1.0.0",
+  "description": "Opinionated Rails best-practice skills: architecture patterns, safety tooling, and more.",
+  "author": {
+    "name": "Sebastian Mueller",
+    "url": "https://github.com/SebastianMueller87"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/naymspace/claude-marketplace",
+  "keywords": ["rails", "ruby", "architecture", "best-practices"]
+}
