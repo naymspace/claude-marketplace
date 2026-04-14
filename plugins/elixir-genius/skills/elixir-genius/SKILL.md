@@ -266,6 +266,48 @@ Process.get(:key)
 # 3. You're building DSLs that require it
 ```
 
+## Type System Best Practices
+
+```elixir
+# DO: Write precise pattern matches and guards — the compiler uses them
+def process(%User{role: :admin} = user) when is_binary(user.name) do
+  # Compiler knows: user is %User{} with role :admin and name is binary
+  admin_action(user)
+end
+
+# DO: Use specific struct patterns — helps inference propagate types
+def format_address(%Address{street: street, city: city}) do
+  "#{street}, #{city}"
+end
+
+# DO: Match on tagged tuples — compiler tracks return type precisely
+with {:ok, user} <- fetch_user(id),
+     {:ok, account} <- fetch_account(user.account_id) do
+  {:ok, %{user: user, account: account}}
+  # Compiler infers return: {:ok, map()} | {:error, dynamic()}
+end
+
+# AVOID: Overly generic function heads that defeat inference
+def process(data) do
+  data.name  # Compiler only knows: %{..., name: dynamic()}
+end
+
+# PREFER: Explicit struct or map pattern for richer type info
+def process(%User{name: name}) do
+  name # Compiler knows: name comes from User struct definition
+end
+
+# DON'T: Suppress type warnings without understanding them
+# Type warnings are sound — if the compiler says it's wrong, investigate
+
+# DON'T: Use @spec for new code targeting v1.20+
+# Typespecs will be phased out in favor of set-theoretic type signatures
+# Continue maintaining existing @spec for libraries supporting older versions
+
+# DON'T: Rely on inference for public API guarantees
+# Inference is best-effort — explicit type signatures planned for future releases
+```
+
 ## Naming Conventions
 
 ### Predicate Functions
