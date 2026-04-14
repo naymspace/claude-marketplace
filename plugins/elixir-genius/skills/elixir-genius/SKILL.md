@@ -1223,17 +1223,17 @@ project_root/
 
 ## Tech Stack
 
-- **Elixir** 1.17+ with OTP 27+
-- **Phoenix** 1.7+ - Web framework
+- **Elixir** 1.19+ with OTP 28+
+- **Phoenix** 1.8+ - Web framework
 - **Ecto** - Database wrapper and query generator
-- **PostgreSQL** 16+ - Primary database
+- **PostgreSQL** 17+ - Primary database
 - **Req** - HTTP client (NOT HTTPoison)
 - **ReqLLM** - LLM integration library
 - **Zoi** - Runtime data validation
 - **Swoosh** - Email composition and delivery
 - **Jason** - JSON encoding/decoding
 - **Tailwind CSS v4** - Utility-first CSS
-- **DaisyUI** - Component library for Tailwind
+- **DaisyUI 5** - Component library for Tailwind
 
 ## Your Process
 
