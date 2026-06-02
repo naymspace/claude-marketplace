@@ -1,0 +1,36 @@
+{
+  "max_file_size": 1000000,
+  "attribution": { "commit": "", "pr": "" },
+  "plansDirectory": ".claude/plans",
+  "permissions": {
+    "allow": [],
+    "deny": [
+      "Read(**/.env)", "Read(**/.env.*)", "Read(**/*.env)",
+      "Write(**/.env)", "Write(**/.env.*)", "Write(**/*.env)",
+      "Edit(**/.env)", "Edit(**/.env.*)", "Edit(**/*.env)",
+
+      "Read(**/*.key)", "Read(**/*.pem)", "Read(**/*.cert)", "Read(**/*.p12)",
+      "Write(**/*.key)", "Write(**/*.pem)", "Write(**/*.cert)", "Write(**/*.p12)",
+      "Edit(**/*.key)", "Edit(**/*.pem)", "Edit(**/*.cert)", "Edit(**/*.p12)",
+
+      "Read(**/*secret*)", "Write(**/*secret*)", "Edit(**/*secret*)",
+
+      "Read(**/*.sql)", "Read(**/*.sql.gz)", "Read(**/*.dump)", "Read(**/backups/**)", "Read(**/dumps/**)",
+      "Write(**/*.sql)", "Write(**/*.sql.gz)", "Write(**/*.dump)", "Write(**/backups/**)", "Write(**/dumps/**)",
+      "Edit(**/*.sql)", "Edit(**/*.sql.gz)", "Edit(**/*.dump)",
+
+      "Read(**/log/**)", "Read(**/tmp/**)", "Read(**/storage/**)", "Read(**/coverage/**)",
+      "Write(**/log/**)", "Write(**/tmp/**)", "Write(**/storage/**)", "Write(**/coverage/**)",
+
+      "Read(**/vendor/**)", "Write(**/vendor/**)",
+      "Read(**/node_modules/**)", "Read(**/dist/**)", "Read(**/build/**)", "Read(**/*.map)",
+      "Write(**/node_modules/**)", "Write(**/dist/**)", "Write(**/build/**)", "Write(**/*.map)",
+
+      "Read(**/.git/**)", "Read(**/.github/**)", "Read(**/.cache/**)",
+      "Read(**/.DS_Store)", "Read(**/Thumbs.db)",
+      "Write(**/.git/**)", "Write(**/.github/**)", "Write(**/.cache/**)",
+      "Write(**/.DS_Store)", "Write(**/Thumbs.db)"
+    ]
+  },
+  "hooks": {}
+}
