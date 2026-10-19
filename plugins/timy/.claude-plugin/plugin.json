@@ -1,9 +1,9 @@
 {
   "name": "timy",
   "version": "0.1.0",
-  "description": "Zeiten pro Projekt aus Claude-Sessions: Aktiv, Tippen, Claude arbeitet",
+  "description": "Time per project from Claude sessions: active, typing and Claude working, in a band above the prompt and a pane",
   "author": {
-    "name": "naymspace"
+    "name": "Mats Boyens"
   },
   "repository": "https://github.com/naymspace/claude-marketplace",
   "keywords": ["time-tracking", "sessions", "projects"],
@@ -24,7 +24,7 @@
     "hours_per_weekday": {
       "type": "string",
       "title": "Soll pro Wochentag (Stunden)",
-      "description": "Optional. Montag bis Sonntag mit Komma getrennt, z. B. 8,8,8,8,8 oder 8,8,8,8,0. Leer lassen, dann zeigt timy kein Soll.",
+      "description": "Optional. Montag bis Sonntag mit Komma getrennt, z. B. 8,8,8,8,8 oder 8,8,8,8,0. Leer lassen, dann zeigt timy kein Soll, außer ein Add-on wie timy-moco liefert eins.",
       "default": ""
     }
   }
