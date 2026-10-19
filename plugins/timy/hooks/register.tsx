@@ -4,10 +4,11 @@ import type { EngineInterface, Register, RenderNode } from 'claude-code'
 import { barsSvg, colorOf, parallelRanges, timelineSvg } from './charts'
 import type { ChartDay } from './charts'
 
-import { allSpans, fillColor, unionLength, dayTarget, displayedTotal, hm, hms, planFilled, planPercent, projectName, sessionLabels, sessionState, shortProject, summarize } from './model'
+import { HOUR, allSpans, fillColor, unionLength, dayTarget, displayedTotal, hm, hms, pad, planFilled, planPercent, projectName, sessionLabels, sessionState, shortProject, summarize } from './model'
 import type { EventType, Span, Summary, ZeitEvent } from './model'
 import { SessionLog, addDays, dayKey, dayStart, daysBetween, loadDays, monthStart, weekStart } from './store'
 import type { Fs } from './store'
+import type { TimyView } from '../types'
 
 const EDIT_THROTTLE_MS = 10_000
 const PANE = 'timy'
@@ -15,14 +16,13 @@ const BAND_DRAWN = { plugin: 'timy', key: 'band' } as const
 const PANE_DRAWN = { plugin: 'timy', key: 'pane' } as const
 const VIEW = { plugin: 'timy', key: 'view' } as const
 const ADDON_TARGETS = { plugin: 'timy-moco', key: 'targets' } as const
-const HOUR = 3_600_000
 
 // a redraw asked for after the module was unloaded has nothing left to draw
 const redrawBand = ($: EngineInterface) => void update($, BAND_DRAWN, n => (n ?? 0) + 1).catch(() => undefined)
 const redrawPane = ($: EngineInterface) => void update($, PANE_DRAWN, n => (n ?? 0) + 1).catch(() => undefined)
 const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
 
-type Tab = 'heute' | 'woche' | 'monat'
+type Tab = TimyView['tab']
 type View = 'grafik' | 'tabelle'
 
 const PX_PER_COLUMN = 8
@@ -97,10 +97,10 @@ const rangeOf = (t: Tab, now: number, offset: number): [number, number] => {
 
 const dayLabel = (t: number) => {
   const d = new Date(t)
-  return `${WEEKDAYS[d.getDay()]} ${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.`
+  return `${WEEKDAYS[d.getDay()]} ${pad(d.getDate())}.${pad(d.getMonth() + 1)}.`
 }
 
-type BarColor = 'success' | 'warning' | 'error'
+type BarColor = ReturnType<typeof fillColor>
 
 type Row = {
   key: string
@@ -202,7 +202,7 @@ const barCell = (ui: Ui, { actual, planned, color }: NonNullable<Row['bar']>, wi
 
 const table = (ui: Ui, columns: Column[], rows: Row[], width: number) => {
   const { Box, Text, Button } = ui
-  const shown = columns.flatMap((column, i) => (width >= column.minBody ? [i] : []))
+  const shown = columns.flatMap((column, i) => (width >= column.minBody ? [{ column, i }] : []))
   const line = (row: Row) => (
     <Box key={row.key} flexDirection="row">
       <Box flexGrow={1} minWidth={8} flexDirection="row" columnGap={1}>
@@ -215,15 +215,15 @@ const table = (ui: Ui, columns: Column[], rows: Row[], width: number) => {
           </Text>
         )}
       </Box>
-      {shown.map(i => (
+      {shown.map(({ column, i }) => (
         <Box
           key={`${row.key}-${i}`}
-          width={columns[i]?.width}
+          width={column.width}
           flexShrink={0}
           justifyContent="flex-end"
         >
-          {columns[i]?.isBar ? (
-            row.bar ? barCell(ui, row.bar, (columns[i]?.width ?? BAR_GAP) - BAR_GAP) : null
+          {column.isBar ? (
+            row.bar ? barCell(ui, row.bar, column.width - BAR_GAP) : null
           ) : (
             <Text wrap="truncate" bold={row.style === 'bold'} dimColor={row.style === 'dim'}>
               {row.values[i] ?? ''}
@@ -318,7 +318,7 @@ const buildReport = async ($: EngineInterface, c: Ctx, t: Tab, offset: number): 
     const target = dayTarget(c.hoursPerWeekday, day)
     const byProject = summarize(spans, labels, day, addDays(day, 1)).rows.map(row => [row.project, row.selected] as const)
     const active = unionLength(spans, 'selected', day, addDays(day, 1))
-    days.push({ key: dayKey(day), label: dayLabel(day), target, byProject, active })
+    days.push({ key: dayKey(day), label: dayLabel(day), short: pad(new Date(day).getDate()), target, byProject, active })
   }
   return {
     from,
@@ -389,15 +389,18 @@ const publishView = ($: EngineInterface, t: Tab, built: Report) =>
   $.state
     .set(VIEW, {
       tab: t,
-      from: built.from,
-      to: built.to,
       days: built.days.map(day => day.key),
       actual: built.summary.rows.filter(row => isShown(row.selected)).map((row): [string, number] => [row.project, row.selected]),
     })
     .catch(() => undefined)
 
+const targetOf = (targets: Record<string, number> | undefined, key: string, configured: number) => {
+  const hours = targets?.[key]
+  return hours === undefined ? configured : hours * HOUR
+}
+
 const withTargets = (days: Report['days'], targets: Record<string, number> | undefined): Report['days'] =>
-  days.map(day => (targets?.[day.key] === undefined ? day : { ...day, target: targets[day.key]! * HOUR }))
+  days.map(day => ({ ...day, target: targetOf(targets, day.key, day.target) }))
 
 const page = async ($: EngineInterface, step: number) => {
   const previous = { tab, offset: pageOffset, report }
@@ -422,9 +425,7 @@ const reopenPane = async ($: EngineInterface) => {
     if (!(await $.ui.panes()).some(pane => pane.id === PANE)) return
     await loadReport($)
     await $.ui.open({ id: PANE, title: 'timy', closeOnEscape: true })
-  } catch {
-    // the pane stays as the app left it
-  }
+  } catch {}
 }
 
 const readBranch = async ($: EngineInterface) => {
@@ -580,7 +581,7 @@ export const register: Register = (on, options) => {
     const ui = $.ui.resolve(e)
     const { Box, Text, Button } = ui
     const { value: targets } = await $.state.get(ADDON_TARGETS)
-    const target = targets?.[live.day] === undefined ? live.target : targets[live.day]! * HOUR
+    const target = targetOf(targets, live.day, live.target)
     const width = e.props.bodyColumns
     const isShort = width < BAND_SHORT_BELOW
     const projectToday = hm(live.projectOthers + live.sessionToday)
@@ -648,8 +649,9 @@ export const register: Register = (on, options) => {
     const { value: targets } = await $.state.get(ADDON_TARGETS)
     const ui = $.ui.resolve(e)
     const { Box, Text, Button } = ui
-    const Svg = e.surface !== 'terminal' && 'Svg' in ui ? ui.Svg : null
-    const isGrafik = Svg !== null && view === 'grafik'
+    const svg = e.surface !== 'terminal' && 'Svg' in ui ? ui.Svg : null
+    const Svg = view === 'grafik' ? svg : null
+    const isGrafik = Svg !== null
     const width = e.props.bodyColumns
     const isSplit = width >= SPLIT_MIN_WIDTH
     const half = Math.floor((width - SPLIT_GAP) / 2)
@@ -701,11 +703,10 @@ export const register: Register = (on, options) => {
     )
     const chartRows = (shown?.summary.rows ?? [])
       .filter(row => isShown(row.selected) || isShown(row.claude))
-      .map(row => ({ project: row.project, name: shortProject(row.project) }))
-    const chart = (current: Report) => {
-      if (Svg === null) return null
+      .map(row => ({ project: row.project, name: shortProject(row.project), selected: row.selected }))
+    const chart = (current: Report, Svg: NonNullable<typeof svg>) => {
       const px = width * PX_PER_COLUMN
-      const alt = chartRows.map(row => `${row.name} ${hm(current.summary.rows.find(r => r.project === row.project)?.selected ?? 0)}`).join(', ')
+      const alt = chartRows.map(row => `${row.name} ${hm(row.selected)}`).join(', ')
       if (tab !== 'heute') {
         const bars = barsSvg({ days: current.days, rows: chartRows, width: px })
         return (
@@ -801,9 +802,9 @@ export const register: Register = (on, options) => {
           {tabButton('heute', 'Heute', '1')}
           {tabButton('woche', 'Woche', '2')}
           {tabButton('monat', 'Monat', '3')}
-          {Svg === null ? null : <Box flexGrow={1} />}
-          {Svg === null ? null : viewButton('grafik', 'Grafik', 'g')}
-          {Svg === null ? null : viewButton('tabelle', 'Tabelle', 't')}
+          {svg === null ? null : <Box flexGrow={1} />}
+          {svg === null ? null : viewButton('grafik', 'Grafik', 'g')}
+          {svg === null ? null : viewButton('tabelle', 'Tabelle', 't')}
         </Box>
         {shown === null ? (
           <Box marginTop={1}>
@@ -821,7 +822,7 @@ export const register: Register = (on, options) => {
                 {isLoading ? <Text dimColor>lädt …</Text> : null}
               </Box>
               {card(shown)}
-              {isGrafik ? <Box marginBottom={1}>{chart(shown)}</Box> : null}
+              {Svg !== null ? <Box marginBottom={1}>{chart(shown, Svg)}</Box> : null}
             </Box>
             {pair(summaryBlock(shown), perDayBlock(shown))}
           </Box>

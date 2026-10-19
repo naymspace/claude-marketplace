@@ -1,4 +1,5 @@
-import type { EventType, ZeitEvent } from './model'
+import { EVENT_TYPES, mondayIndex, pad } from './model'
+import type { ZeitEvent } from './model'
 
 export type Fs = {
   read: (path: string) => Promise<string>
@@ -6,8 +7,6 @@ export type Fs = {
   list: (path: string) => Promise<{ name: string; kind: 'file' | 'dir' | 'other' }[]>
   exists: (path: string) => Promise<boolean>
 }
-
-const pad = (n: number) => String(n).padStart(2, '0')
 
 const DAY_START_HOUR = 4
 
@@ -36,7 +35,7 @@ export const addDays = (t: number, days: number): number => {
 
 export const weekStart = (t: number): number => {
   const start = dayStart(t)
-  return addDays(start, -((new Date(start).getDay() + 6) % 7))
+  return addDays(start, -mondayIndex(start))
 }
 
 export const monthStart = (t: number): number => {
@@ -51,15 +50,13 @@ export const daysBetween = (from: number, to: number): string[] => {
   return days
 }
 
-const TYPES: readonly EventType[] = ['attach', 'detach', 'edit', 'submit', 'turn-start', 'turn-end']
-
 const toLine = (event: ZeitEvent): string => JSON.stringify({ ...event, t: new Date(event.t).toISOString() })
 
 const fromLine = (line: string): ZeitEvent | null => {
   try {
     const raw = JSON.parse(line)
     const t = Date.parse(raw.t)
-    if (Number.isNaN(t) || !TYPES.includes(raw.type) || typeof raw.project !== 'string' || typeof raw.session !== 'string') {
+    if (Number.isNaN(t) || !EVENT_TYPES.includes(raw.type) || typeof raw.project !== 'string' || typeof raw.session !== 'string') {
       return null
     }
     return { ...raw, t }

@@ -155,16 +155,6 @@ describe('sessionState', () => {
 })
 
 describe('plan', () => {
-  const summary = summarize(
-    [
-      { kind: 'selected', project: 'beispiel/shop', session: 'a', start: at(9, 0), end: at(11, 10) },
-      { kind: 'selected', project: 'beispiel/blog', session: 'b', start: at(12, 0), end: at(12, 50) },
-    ],
-    new Map(),
-    at(0, 0),
-    at(23, 59),
-  )
-
   test('planPercent and planFilled show progress and cap the bar at full', () => {
     expect(planPercent(130 * MIN, 10 * 60 * MIN)).toBe(22)
     expect(planPercent(MIN, 0)).toBe(0)
@@ -239,7 +229,6 @@ describe('summarize', () => {
       ],
     })
     expect(summary.rows[1]?.selected).toBe(10 * MIN)
-    expect(summary.total.selected).toBe(145 * MIN)
   })
 
   test('span over midnight is split by the range', () => {

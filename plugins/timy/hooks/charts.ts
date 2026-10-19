@@ -1,31 +1,15 @@
-import { hm, shortProject } from './model'
-import type { Span } from './model'
+import { HOUR, clip, hm, merge, pad, shortProject } from './model'
+import type { Range, Span } from './model'
 
 export const PALETTE = ['#1D9E75', '#7F77DD', '#D85A30', '#378ADD', '#D4537E', '#639922', '#BA7517']
 const MUTED = '#888780'
 const FONT = 'font-family="system-ui, sans-serif" font-size="13"'
 const CHAR_PX = 7
-const HOUR = 3_600_000
 
 export const colorOf = (index: number): string => PALETTE[index % PALETTE.length]!
 
 export const escapeXml = (text: string): string =>
   text.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[c]!)
-
-type Range = [number, number]
-
-const merge = (ranges: readonly Range[]): Range[] => {
-  const merged: Range[] = []
-  for (const [start, end] of [...ranges].sort((a, b) => a[0] - b[0])) {
-    const last = merged.at(-1)
-    if (last && start <= last[1]) last[1] = Math.max(last[1], end)
-    else merged.push([start, end])
-  }
-  return merged
-}
-
-const clip = (spans: readonly Span[], from: number, to: number): Range[] =>
-  spans.map((s): Range => [Math.max(s.start, from), Math.min(s.end, to)]).filter(([start, end]) => end > start)
 
 export const parallelRanges = (spans: readonly Span[], from: number, to: number): Range[] => {
   const sessions = new Map<string, Span[]>()
@@ -35,15 +19,15 @@ export const parallelRanges = (spans: readonly Span[], from: number, to: number)
   }
   const steps = [...sessions.values()]
     .flatMap(list => merge(clip(list, from, to)))
-    .flatMap(([start, end]) => [
+    .flatMap(([start, end]): Range[] => [
       [start, 1],
       [end, -1],
     ])
-    .sort((a, b) => a[0]! - b[0]! || a[1]! - b[1]!)
+    .sort((a, b) => a[0] - b[0] || a[1] - b[1])
   const ranges: Range[] = []
   let active = 0
   let since = 0
-  for (const [t, step] of steps as [number, number][]) {
+  for (const [t, step] of steps) {
     if (active === 1 && step === 1) since = t
     if (active === 2 && step === -1 && t > since) ranges.push([since, t])
     active += step
@@ -63,7 +47,7 @@ const chart = (width: number, height: number, parts: readonly string[]): Chart =
 
 const clock = (t: number) => {
   const d = new Date(t)
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 const floorHour = (t: number) => {
@@ -150,7 +134,7 @@ export const timelineSvg = ({
   return chart(width, height, parts)
 }
 
-export type ChartDay = { label: string; target: number; byProject: readonly (readonly [string, number])[] }
+export type ChartDay = { label: string; short: string; target: number; byProject: readonly (readonly [string, number])[] }
 
 export const barsSvg = ({ days, rows, width }: { days: readonly ChartDay[]; rows: readonly ChartRow[]; width: number }): Chart => {
   const height = 200
@@ -193,7 +177,7 @@ export const barsSvg = ({ days, rows, width }: { days: readonly ChartDay[]; rows
     if (totals[i]! > 0 && slot >= 30) {
       parts.push(`<text x="${cx}" y="${y(Math.max(totals[i]!, day.target)) - 4}" text-anchor="middle" fill="${MUTED}" ${FONT}>${hm(totals[i]!)}</text>`)
     }
-    const label = slot >= day.label.length * CHAR_PX + 8 ? day.label : day.label.replace(/^\D+ /, '').replace(/\..*$/, '')
+    const label = slot >= day.label.length * CHAR_PX + 8 ? day.label : day.short
     if (slot >= 14 || i % 2 === 0) {
       parts.push(`<text x="${cx}" y="${height - 6}" text-anchor="middle" fill="${MUTED}" ${FONT}>${escapeXml(label)}</text>`)
     }
