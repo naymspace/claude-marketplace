@@ -144,6 +144,14 @@ describe('barsSvg', () => {
     expect(svg).toContain('>01</text>')
     expect(svg).not.toContain('Mo 01.10.</text>')
   })
+
+  test('a week slot too narrow for the whole label shows only the day of month', () => {
+    const week = ['Mo 19.10.', 'Di 20.10.', 'Mi 21.10.', 'Do 22.10.', 'Fr 23.10.'].map(label => ({ label, target: 0, byProject: [] }))
+    const narrow = barsSvg({ days: week, rows, width: 36 + 5 * 50 })
+    expect(narrow).toContain('>19</text>')
+    expect(narrow).not.toContain('Mo 19.10.</text>')
+    expect(barsSvg({ days: week, rows, width: 36 + 5 * 90 })).toContain('>Mo 19.10.</text>')
+  })
 })
 
 describe('escapeXml', () => {

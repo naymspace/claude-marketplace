@@ -4,6 +4,7 @@ import type { Span } from './model'
 export const PALETTE = ['#1D9E75', '#7F77DD', '#D85A30', '#378ADD', '#D4537E', '#639922', '#BA7517']
 const MUTED = '#888780'
 const FONT = 'font-family="system-ui, sans-serif" font-size="13"'
+const CHAR_PX = 7
 const HOUR = 3_600_000
 
 export const colorOf = (index: number): string => PALETTE[index % PALETTE.length]!
@@ -192,7 +193,7 @@ export const barsSvg = ({ days, rows, width }: { days: readonly ChartDay[]; rows
     if (totals[i]! > 0 && slot >= 30) {
       parts.push(`<text x="${cx}" y="${y(Math.max(totals[i]!, day.target)) - 4}" text-anchor="middle" fill="${MUTED}" ${FONT}>${hm(totals[i]!)}</text>`)
     }
-    const label = slot >= 44 ? day.label : day.label.replace(/^\D+ /, '').replace(/\..*$/, '')
+    const label = slot >= day.label.length * CHAR_PX + 8 ? day.label : day.label.replace(/^\D+ /, '').replace(/\..*$/, '')
     if (slot >= 14 || i % 2 === 0) {
       parts.push(`<text x="${cx}" y="${height - 6}" text-anchor="middle" fill="${MUTED}" ${FONT}>${escapeXml(label)}</text>`)
     }
