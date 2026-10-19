@@ -1,0 +1,31 @@
+{
+  "name": "timy",
+  "version": "0.1.0",
+  "description": "Zeiten pro Projekt aus Claude-Sessions: Aktiv, Tippen, Claude arbeitet",
+  "author": {
+    "name": "naymspace"
+  },
+  "repository": "https://github.com/naymspace/claude-marketplace",
+  "keywords": ["time-tracking", "sessions", "projects"],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "idle_minutes": {
+      "type": "number",
+      "title": "Leerlauf-Grenze (Minuten)",
+      "description": "Nach so vielen Minuten ohne Eingabe zählt „Aktiv“ nicht weiter, außer Claude arbeitet gerade (dann bis zu 2 Stunden).",
+      "default": 5
+    },
+    "data_dir": {
+      "type": "string",
+      "title": "Datenordner",
+      "description": "Leer lassen für ~/.claude/timy",
+      "default": ""
+    },
+    "hours_per_weekday": {
+      "type": "string",
+      "title": "Soll pro Wochentag (Stunden)",
+      "description": "Optional. Montag bis Sonntag mit Komma getrennt, z. B. 8,8,8,8,8 oder 8,8,8,8,0. Leer lassen, dann zeigt timy kein Soll.",
+      "default": ""
+    }
+  }
+}

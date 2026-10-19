@@ -19,6 +19,12 @@
         "source": "./plugins/rails-basics",
         "version": "1.0.0",
         "description": "Opinionated Rails best-practice skills: architecture patterns, safety tooling, and more."
+      },
+      {
+        "name": "timy",
+        "source": "./plugins/timy",
+        "version": "0.1.0",
+        "description": "Time per project from Claude sessions: active, typing and Claude working, in a band above the prompt and a pane"
       }
     ]
   }
