@@ -414,7 +414,7 @@ for (const surface of SURFACES) {
       expect(await textsOf(ui)).toContain('shop · heute 0:33 · Session 0:20:07 ▾')
     })
 
-    test('the dot turns grey and the time stops at the idle limit', async ($, on) => {
+    test('the dot turns to warning and the time stops at the idle limit', async ($, on) => {
       engine(on, todayFiles)
       const clock = mock.clock(on, { now: at(15, 9, 20) })
       await $.session.start(startOf(surface))
@@ -957,6 +957,43 @@ describe('/timy day paging', () => {
     texts = await textsOf(ui)
     expect(texts).toContain('Heute, Do 15.10.')
     expect(texts.some(t => t.startsWith('shop 1:40 '))).toBe(true)
+  })
+})
+
+describe('/timy layout and failure', () => {
+  test('a wide pane sets summary and days side by side', async ($, on) => {
+    engine(on, reportFiles)
+    const clock = mock.clock(on, { now: at(15, 18, 0) })
+    await $.session.start(startOf('desktop'))
+    await clock.settle()
+    const ui = await openZeit($, 'desktop', 120, 'tabelle')
+    await ui.press({ key: 'tab-woche' })
+    const halves = (await ui.findAll({ type: 'Box' })).filter(box => box.props.width === '50%')
+    expect(halves).toHaveLength(2)
+    expect(await textsOf(ui)).toEqual(expect.arrayContaining(['Summe', 'Do 15.10.']))
+  })
+
+  test('a narrow pane stacks summary and days', async ($, on) => {
+    engine(on, reportFiles)
+    const clock = mock.clock(on, { now: at(15, 18, 0) })
+    await $.session.start(startOf('desktop'))
+    await clock.settle()
+    const ui = await openZeit($, 'desktop', 80, 'tabelle')
+    await ui.press({ key: 'tab-woche' })
+    expect((await ui.findAll({ type: 'Box' })).filter(box => box.props.width === '50%')).toHaveLength(0)
+  })
+
+  test('a pane that fails to draw says so instead of going blank', async ($, on) => {
+    on('ui.render', { component: 'Pane', requestId: 'timy' }, async () => {
+      throw new Error('kaputt')
+    })
+    engine(on, reportFiles)
+    const clock = mock.clock(on, { now: at(15, 18, 0) })
+    await $.session.start(startOf('desktop'))
+    await clock.settle()
+    await $.command.run({ command: 'timy', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
+    const ui = await $.ui.mount({ plugin: 'timy', surface: 'desktop', component: 'Pane', requestId: 'timy', props: paneProps })
+    expect(await textsOf(ui)).toContain('timy konnte das Panel nicht zeichnen')
   })
 })
 
