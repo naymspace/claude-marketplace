@@ -983,6 +983,20 @@ describe('/timy layout and failure', () => {
     expect((await ui.findAll({ type: 'Box' })).filter(box => box.props.width === '50%')).toHaveLength(0)
   })
 
+  test('the month pages back like day and week', async ($, on) => {
+    engine(on, reportFiles)
+    const clock = mock.clock(on, { now: at(15, 18, 0) })
+    await $.session.start(startOf('desktop'))
+    await clock.settle()
+    const ui = await openZeit($, 'desktop', 80, 'tabelle')
+    await ui.press({ key: 'tab-monat' })
+    expect(await textsOf(ui)).toContain('Dieser Monat')
+    await ui.press({ key: 'month-prev' })
+    expect(await textsOf(ui)).toContain('September 2026')
+    await ui.press({ key: 'month-next' })
+    expect(await textsOf(ui)).toContain('Dieser Monat')
+  })
+
   test('a pane that fails to draw says so instead of going blank', async ($, on) => {
     on('ui.render', { component: 'Pane', requestId: 'timy' }, async () => {
       throw new Error('kaputt')
