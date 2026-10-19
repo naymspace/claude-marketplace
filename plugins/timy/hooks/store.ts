@@ -95,18 +95,12 @@ export class SessionLog {
   }
 }
 
-export const loadDays = async (fs: Fs, dir: string, days: readonly string[]): Promise<ZeitEvent[]> => {
-  const events: ZeitEvent[] = []
-  for (const day of days) {
-    const folder = `${dir}/${day}`
-    if (!(await fs.exists(folder))) continue
-    for (const entry of await fs.list(folder)) {
-      if (entry.kind !== 'file' || !entry.name.endsWith('.jsonl')) continue
-      for (const line of (await fs.read(`${folder}/${entry.name}`)).split('\n')) {
-        const event = line.trim() ? fromLine(line) : null
-        if (event) events.push(event)
-      }
-    }
-  }
-  return events
+const loadDay = async (fs: Fs, folder: string): Promise<ZeitEvent[]> => {
+  if (!(await fs.exists(folder))) return []
+  const files = (await fs.list(folder)).filter(entry => entry.kind === 'file' && entry.name.endsWith('.jsonl'))
+  const texts = await Promise.all(files.map(entry => fs.read(`${folder}/${entry.name}`)))
+  return texts.flatMap(text => text.split('\n').flatMap(line => (line.trim() ? (fromLine(line) ?? []) : [])))
 }
+
+export const loadDays = async (fs: Fs, dir: string, days: readonly string[]): Promise<ZeitEvent[]> =>
+  (await Promise.all(days.map(day => loadDay(fs, `${dir}/${day}`)))).flat()
