@@ -1010,6 +1010,16 @@ describe('add-ons', () => {
     expect(texts.at(-1)).toBe('add-on sieht heute mit 2 Projekten')
     expect(texts.indexOf('Summe')).toBeLessThan(texts.length - 1)
   })
+
+  test('an add-on gets only the projects the pane shows', { plugins: [slotAddon] }, async ($, on) => {
+    const blink = [line('attach', at(15, 13, 0), 'd', 'beispiel/sandbox'), line('detach', at(15, 13, 0) + 10_000, 'd', 'beispiel/sandbox')]
+    engine(on, { ...reportFiles, [`${DIR}/2026-10-15/d.jsonl`]: blink.join('\n') + '\n' })
+    const clock = mock.clock(on, { now: at(15, 18, 0) })
+    await $.session.start(startOf('desktop'))
+    await clock.settle()
+    const texts = (await (await openZeit($, 'desktop', 80, 'tabelle')).findAll({ type: 'Text' })).map(t => t.text)
+    expect(texts.at(-1)).toBe('add-on sieht heute mit 2 Projekten')
+  })
 })
 
 describe('/timy after a reload', () => {

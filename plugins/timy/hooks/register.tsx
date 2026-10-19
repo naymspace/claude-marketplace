@@ -392,7 +392,7 @@ const publishView = ($: EngineInterface, t: Tab, built: Report) =>
       from: built.from,
       to: built.to,
       days: built.days.map(day => day.key),
-      actual: built.summary.rows.map((row): [string, number] => [row.project, row.selected]),
+      actual: built.summary.rows.filter(row => isShown(row.selected)).map((row): [string, number] => [row.project, row.selected]),
     })
     .catch(() => undefined)
 
