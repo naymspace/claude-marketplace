@@ -1,4 +1,4 @@
-import type { On, ProcessRunResult, PromptEditInput } from 'claude-code'
+import type { On, ProcessRunResult, PromptEditInput, RenderElement } from 'claude-code'
 import { describe, expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
@@ -957,6 +957,58 @@ describe('/timy day paging', () => {
     texts = await textsOf(ui)
     expect(texts).toContain('Heute, Do 15.10.')
     expect(texts.some(t => t.startsWith('shop 1:40 '))).toBe(true)
+  })
+})
+
+describe('add-ons', () => {
+  const targetsAddon = {
+    name: 'timy-moco',
+    register(on: On) {
+      on('session.start', async ($, e, next) => {
+        const started = await next(e)
+        await $.state.set({ plugin: 'timy-moco', key: 'targets' }, { '2026-10-15': 6 })
+        return started
+      })
+    },
+  }
+
+  const slotAddon = {
+    name: 'timy-moco',
+    register(on: On) {
+      on('ui.render', { component: 'Pane', requestId: 'timy' }, async ($, e, next) => {
+        const theirs = await next(e)
+        const { value: view } = await $.state.get({ plugin: 'timy', key: 'view' })
+        const { Box, Text } = $.ui.resolve(e)
+        return h(Box, { flexDirection: 'column' }, theirs, h(Text, {}, `add-on sieht ${view?.tab} mit ${view?.actual.length} Projekten`)) as RenderElement
+      })
+    },
+  }
+
+  test('the band takes the day target from an add-on', { plugins: [targetsAddon] }, async ($, on) => {
+    engine(on, todayFiles)
+    const clock = mock.clock(on, { now: at(15, 9, 20) })
+    await $.session.start(startOf('desktop'))
+    await clock.settle()
+    const ui = await $.ui.mount({ plugin: 'timy', surface: 'desktop', component: 'AbovePrompt', props })
+    expect(await textsOf(ui)).toContain('Tag 0:20/6:00')
+  })
+
+  test('the pane counts the add-on target in its card', { plugins: [targetsAddon] }, async ($, on) => {
+    engine(on, reportFiles)
+    const clock = mock.clock(on, { now: at(15, 18, 0) })
+    await $.session.start(startOf('desktop'))
+    await clock.settle()
+    expect(await textsOf(await openZeit($, 'desktop', 80, 'tabelle'))).toContain('von 6:00 aktiv')
+  })
+
+  test('an add-on draws below the pane and reads the shown view', { plugins: [slotAddon] }, async ($, on) => {
+    engine(on, reportFiles)
+    const clock = mock.clock(on, { now: at(15, 18, 0) })
+    await $.session.start(startOf('desktop'))
+    await clock.settle()
+    const texts = (await (await openZeit($, 'desktop', 80, 'tabelle')).findAll({ type: 'Text' })).map(t => t.text)
+    expect(texts.at(-1)).toBe('add-on sieht heute mit 2 Projekten')
+    expect(texts.indexOf('Summe')).toBeLessThan(texts.length - 1)
   })
 })
 

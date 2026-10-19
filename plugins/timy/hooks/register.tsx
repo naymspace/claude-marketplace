@@ -13,6 +13,9 @@ const EDIT_THROTTLE_MS = 10_000
 const PANE = 'timy'
 const BAND_DRAWN = { plugin: 'timy', key: 'band' } as const
 const PANE_DRAWN = { plugin: 'timy', key: 'pane' } as const
+const VIEW = { plugin: 'timy', key: 'view' } as const
+const ADDON_TARGETS = { plugin: 'timy-moco', key: 'targets' } as const
+const HOUR = 3_600_000
 
 // a redraw asked for after the module was unloaded has nothing left to draw
 const redrawBand = ($: EngineInterface) => void update($, BAND_DRAWN, n => (n ?? 0) + 1).catch(() => undefined)
@@ -47,6 +50,7 @@ let live: {
   projectOthers: number
   dayAtRefresh: number
   sessionAtRefresh: number
+  day: string
   target: number
   mine: ZeitEvent[]
   sessionToday: number
@@ -261,6 +265,7 @@ const refreshLive = async ($: EngineInterface) => {
       projectOthers: (row?.selected ?? 0) - state.selected,
       dayAtRefresh: unionLength(spans, 'selected', from, addDays(from, 1)),
       sessionAtRefresh: state.selected,
+      day: dayKey(from),
       target: dayTarget(ctx.hoursPerWeekday, from),
       mine,
       sessionToday: state.selected,
@@ -313,7 +318,7 @@ const buildReport = async ($: EngineInterface, c: Ctx, t: Tab, offset: number): 
     const target = dayTarget(c.hoursPerWeekday, day)
     const byProject = summarize(spans, labels, day, addDays(day, 1)).rows.map(row => [row.project, row.selected] as const)
     const active = unionLength(spans, 'selected', day, addDays(day, 1))
-    if (target > 0 || byProject.length > 0) days.push({ key: dayKey(day), label: dayLabel(day), target, byProject, active })
+    days.push({ key: dayKey(day), label: dayLabel(day), target, byProject, active })
   }
   return {
     from,
@@ -357,6 +362,7 @@ const loadReport = async ($: EngineInterface, previous: { tab: Tab; offset: numb
   report = built
   isLoading = false
   redrawPane($)
+  await publishView($, t, built)
 }
 
 const refreshPane = async ($: EngineInterface) => {
@@ -371,12 +377,27 @@ const refreshPane = async ($: EngineInterface) => {
     seen.set(`${t}:${offset}`, built)
     report = built
     redrawPane($)
+    await publishView($, t, built)
   } catch {
     // a closed pane or an unreadable day log keeps the shown report
   }
 }
 
 const sumOf = (values: Iterable<number>) => [...values].reduce((sum, ms) => sum + ms, 0)
+
+const publishView = ($: EngineInterface, t: Tab, built: Report) =>
+  $.state
+    .set(VIEW, {
+      tab: t,
+      from: built.from,
+      to: built.to,
+      days: built.days.map(day => day.key),
+      actual: built.summary.rows.map((row): [string, number] => [row.project, row.selected]),
+    })
+    .catch(() => undefined)
+
+const withTargets = (days: Report['days'], targets: Record<string, number> | undefined): Report['days'] =>
+  days.map(day => (targets?.[day.key] === undefined ? day : { ...day, target: targets[day.key]! * HOUR }))
 
 const page = async ($: EngineInterface, step: number) => {
   const previous = { tab, offset: pageOffset, report }
@@ -558,6 +579,8 @@ export const register: Register = (on, options) => {
     }
     const ui = $.ui.resolve(e)
     const { Box, Text, Button } = ui
+    const { value: targets } = await $.state.get(ADDON_TARGETS)
+    const target = targets?.[live.day] === undefined ? live.target : targets[live.day]! * HOUR
     const width = e.props.bodyColumns
     const isShort = width < BAND_SHORT_BELOW
     const projectToday = hm(live.projectOthers + live.sessionToday)
@@ -585,10 +608,10 @@ export const register: Register = (on, options) => {
         {isShort ? null : (
           <Box flexDirection="row" columnGap={1} flexShrink={0}>
             <Text dimColor wrap="truncate">
-              {`Tag ${hm(dayTotal)}${live.target > 0 ? `/${hm(live.target)}` : ''}`}
+              {`Tag ${hm(dayTotal)}${target > 0 ? `/${hm(target)}` : ''}`}
             </Text>
-            {live.target > 0 && width >= BAND_BAR_FROM
-              ? bar(ui, planFilled(dayTotal, live.target, BAND_BAR_WIDTH), BAND_BAR_WIDTH, fillColor(dayTotal, live.target))
+            {target > 0 && width >= BAND_BAR_FROM
+              ? bar(ui, planFilled(dayTotal, target, BAND_BAR_WIDTH), BAND_BAR_WIDTH, fillColor(dayTotal, target))
               : null}
           </Box>
         )}
@@ -621,6 +644,8 @@ export const register: Register = (on, options) => {
   on('ui.render', { component: 'Pane' }, async ($, e, next) => {
     if (e.requestId !== PANE) return next(e)
     await $.state.get(PANE_DRAWN)
+    const addons = await next(e)
+    const { value: targets } = await $.state.get(ADDON_TARGETS)
     const ui = $.ui.resolve(e)
     const { Box, Text, Button } = ui
     const Svg = e.surface !== 'terminal' && 'Svg' in ui ? ui.Svg : null
@@ -644,7 +669,7 @@ export const register: Register = (on, options) => {
           {right}
         </Box>
       )
-    const shown = report
+    const shown = report === null ? null : { ...report, days: withTargets(report.days, targets).filter(day => day.target > 0 || day.active > 0) }
     const tabButton = (t: Tab, label: string, hotkey: string) => (
       <Button
         key={`tab-${t}`}
@@ -801,6 +826,7 @@ export const register: Register = (on, options) => {
             {pair(summaryBlock(shown), perDayBlock(shown))}
           </Box>
         )}
+        {addons}
       </Box>
     )
   }).catch(($, e, next) => {
