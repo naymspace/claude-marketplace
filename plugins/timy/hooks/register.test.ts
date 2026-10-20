@@ -609,7 +609,8 @@ const openZeit = async (
     presentation: { isFullscreen: false, columns: 80 },
   })
   const ui = await $.ui.mount({ plugin: 'timy', surface, component: 'Pane', requestId: 'timy', props: { ...paneProps, bodyColumns } })
-  if (surface !== 'terminal') await ui.press({ key: `view-${view}` })
+  const toggle = (await ui.findAll({ type: 'Button' })).find(button => button.key === `view-${view}`)
+  if (toggle) await ui.press({ key: `view-${view}` })
   return ui
 }
 
@@ -859,7 +860,8 @@ describe('/timy charts', () => {
     expect(svg?.source).toContain('<title>jetzt 18:00</title>')
     expect(svg?.alt).toBe('Zeitleiste heute: shop 1:40, blog 0:50')
     const texts = await textsOf(ui)
-    expect(texts).toEqual(expect.arrayContaining(['2:30', 'von 8:00 aktiv', '31 %', 'Claude 0:00 · parallel 0:00']))
+    expect(texts).toEqual(expect.arrayContaining(['2:30', 'von 8:00 aktiv', '31 %', 'Claude 0:00']))
+    expect(texts.some(t => t.includes('parallel'))).toBe(false)
     expect(texts).not.toContain('aktiv')
     expect(texts.some(t => t.startsWith('● shop 1:40 '))).toBe(true)
     expect(texts.some(t => t.includes('#12 Login-Seite'))).toBe(false)

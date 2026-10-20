@@ -1,6 +1,6 @@
 import type { RenderNode } from 'claude-code'
 
-import { barsSvg, colorOf, parallelRanges, timelineSvg } from './charts'
+import { barsSvg, colorsFor, parallelRanges, timelineSvg } from './charts'
 import type { ChartDay, ChartRow } from './charts'
 import { fillColor, hm, planPercent, shortProject, unionLength } from './model'
 import type { Span, Summary } from './model'
@@ -83,18 +83,22 @@ const tabs = (p: PaneInput) => {
       onPress={() => p.onTab(tab)}
     />
   )
-  const viewButton = (view: View, label: string, hotkey: string) => (
-    <Button key={`view-${view}`} label={label} hotkey={hotkey} plain dimColor={p.view !== view} onPress={() => p.onView(view)} />
-  )
   return (
     <Box flexDirection="row" flexWrap="wrap" columnGap={3}>
       {tabButton('heute', 'Heute', '1')}
       {tabButton('woche', 'Woche', '2')}
       {tabButton('monat', 'Monat', '3')}
-      {p.svg === null ? null : <Box flexGrow={1} />}
-      {p.svg === null ? null : viewButton('grafik', 'Grafik', 'g')}
-      {p.svg === null ? null : viewButton('tabelle', 'Tabelle', 't')}
     </Box>
+  )
+}
+
+const viewSwitch = (p: PaneInput) => {
+  if (p.svg === null) return null
+  const { Button } = p.ui
+  return p.view === 'grafik' ? (
+    <Button key="view-tabelle" label="Tabelle" hotkey="t" plain dimColor onPress={() => p.onView('tabelle')} />
+  ) : (
+    <Button key="view-grafik" label="Grafik" hotkey="g" plain dimColor onPress={() => p.onView('grafik')} />
   )
 }
 
@@ -102,13 +106,21 @@ const heading = (p: PaneInput, report: Report) => {
   const { Box, Text, Button } = p.ui
   const key = PAGE_KEY[p.tab]
   return (
-    <Box flexDirection="row" columnGap={2}>
-      <Button key={`${key}-prev`} plain label="‹" onPress={() => p.onPage(-1)} />
+    <Box flexDirection="row" flexWrap="wrap" columnGap={2}>
+      <Button key={`${key}-prev`} plain label="←" onPress={() => p.onPage(-1)} />
       <Text bold>{report.title}</Text>
-      {p.offset < 0 ? <Button key={`${key}-next`} plain label="›" onPress={() => p.onPage(1)} /> : null}
+      {p.offset < 0 ? <Button key={`${key}-next`} plain label="→" onPress={() => p.onPage(1)} /> : null}
       {p.isLoading ? <Text dimColor>lädt …</Text> : null}
+      <Box flexGrow={1} />
+      {viewSwitch(p)}
     </Box>
   )
+}
+
+const todayLine = (report: Report) => {
+  const claude = unionLength(report.spans, 'claude', report.from, report.to)
+  const parallel = sumOf(parallelRanges(report.spans, report.from, report.to).map(([a, b]) => b - a))
+  return parallel > 0 ? `Claude ${hm(claude)} · parallel ${hm(parallel)}` : `Claude ${hm(claude)}`
 }
 
 const card = ({ ui, tab }: PaneInput, report: Report) => {
@@ -124,11 +136,7 @@ const card = ({ ui, tab }: PaneInput, report: Report) => {
         {target > 0 ? <Text dimColor>{`${planPercent(active, target)} %`}</Text> : null}
       </Box>
       {target > 0 ? fullBar(ui, active, target) : null}
-      {tab === 'heute' ? (
-        <Text dimColor>
-          {`Claude ${hm(unionLength(report.spans, 'claude', report.from, report.to))} · parallel ${hm(sumOf(parallelRanges(report.spans, report.from, report.to).map(([a, b]) => b - a)))}`}
-        </Text>
-      ) : null}
+      {tab === 'heute' ? <Text dimColor>{todayLine(report)}</Text> : null}
     </Box>
   )
 }
@@ -148,7 +156,7 @@ const chart = ({ ui, tab, width }: PaneInput, Svg: SvgElement, report: Report, r
     const bars = barsSvg({ days: report.days, rows, width: px })
     return (
       <Box flexDirection="column" rowGap={1}>
-        <Text dimColor>Aktiv pro Tag</Text>
+        <Text dimColor>Stunden aktiv pro Tag</Text>
         <Svg source={bars.source} width={bars.width} height={bars.height} alt={`Stunden pro Tag: ${alt}`} isInteractive />
       </Box>
     )
@@ -213,7 +221,7 @@ export const renderPane = (p: PaneInput) => {
   }
   const layout = layoutOf(p.width)
   const rows = chartRowsOf(report)
-  const dots = Svg === null ? new Map<string, string>() : new Map(rows.map((row, i) => [row.project, colorOf(i)]))
+  const dots = Svg === null ? new Map<string, string>() : colorsFor(rows.map(row => row.project))
   const summary = table(p.ui, COLUMNS, summaryRows(report.summary, folding(p, Svg !== null), dots), layout.columnWidth)
   const hasPerDay = Svg === null && p.tab !== 'heute' && report.days.some(day => day.active > 0)
   return (
