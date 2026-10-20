@@ -1,7 +1,7 @@
 import { HOUR, clip, hm, merge, pad, shortProject } from './model'
 import type { Range, Span } from './model'
 
-export const PALETTE = ['#1D9E75', '#7F77DD', '#D85A30', '#378ADD', '#D4537E', '#BA7517']
+export const PALETTE = ['#D9B44A', '#7F77DD', '#D85A30', '#378ADD', '#D4537E', '#2BB3C0']
 const NOW = '#ECEAE6'
 const MUTED = '#888780'
 const FONT = 'font-family="system-ui, sans-serif" font-size="13"'

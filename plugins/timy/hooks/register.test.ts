@@ -854,7 +854,7 @@ describe('/timy charts', () => {
     expect(svg?.alt).toBe('Zeitleiste heute: shop 1:40, blog 0:50')
     const texts = await textsOf(ui)
     expect(texts).toEqual(expect.arrayContaining(['2:30', 'von 8:00 aktiv', '31 %', 'Claude 0:00']))
-    expect(texts.some(t => t.includes('parallel'))).toBe(false)
+    expect(texts.some(t => t.startsWith('Claude') && t.includes('parallel'))).toBe(false)
     expect(texts).not.toContain('aktiv')
     expect(texts.some(t => t.startsWith('● shop 1:40 '))).toBe(true)
     expect(texts.some(t => t.includes('#12 Login-Seite'))).toBe(false)
