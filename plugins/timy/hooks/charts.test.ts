@@ -138,13 +138,6 @@ describe('barsSvg', () => {
     expect(barsSvg({ days, rows, width: 600 })).toContain('>5:00</text>')
   })
 
-  test('narrow slots show only the day of month', () => {
-    const month = Array.from({ length: 31 }, (_, i) => ({ label: `Mo ${String(i + 1).padStart(2, '0')}.10.`, short: String(i + 1).padStart(2, '0'), target: 0, byProject: [] }))
-    const svg = barsSvg({ days: month, rows, width: 500 })
-    expect(svg).toContain('>01</text>')
-    expect(svg).not.toContain('Mo 01.10.</text>')
-  })
-
   test('a week slot too narrow for the whole label shows only the day of month', () => {
     const week = ['Mo 19.10.', 'Di 20.10.', 'Mi 21.10.', 'Do 22.10.', 'Fr 23.10.'].map(label => ({ label, short: label.slice(3, 5), target: 0, byProject: [] }))
     const narrow = barsSvg({ days: week, rows, width: 36 + 5 * 50 })

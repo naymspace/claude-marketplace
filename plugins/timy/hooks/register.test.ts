@@ -981,6 +981,7 @@ describe('/timy layout and failure', () => {
     const ui = await openZeit($, 'desktop', 80, 'tabelle')
     await ui.press({ key: 'tab-woche' })
     expect((await ui.findAll({ type: 'Box' })).filter(box => box.props.width === '50%')).toHaveLength(0)
+    expect(await textsOf(ui)).toEqual(expect.arrayContaining(['Summe', 'Do 15.10.']))
   })
 
   test('the month pages back like day and week', async ($, on) => {
