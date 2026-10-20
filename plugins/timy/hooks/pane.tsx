@@ -1,7 +1,7 @@
 import type { RenderNode } from 'claude-code'
 
-import { barsSvg, colorsFor, parallelRanges, timelineSvg } from './charts'
-import type { ChartDay, ChartRow } from './charts'
+import { barsSvg, colorOf, parallelRanges, timelineSvg } from './charts'
+import type { ChartDay, ChartRow, Colors } from './charts'
 import { fillColor, hm, planPercent, shortProject, unionLength } from './model'
 import type { Span, Summary } from './model'
 import type { Tab } from './period'
@@ -16,6 +16,7 @@ export type Report = {
   title: string
   now: number
   summary: Summary
+  colors: Colors
   spans: Span[]
   days: (ChartDay & { active: number })[]
 }
@@ -143,11 +144,10 @@ const card = ({ ui, tab }: PaneInput, report: Report) => {
 
 type SelectedRow = ChartRow & { selected: number }
 
-const chartRowsOf = (report: Report): SelectedRow[] => {
-  const shown = report.summary.rows.filter(row => isShown(row.selected) || isShown(row.claude))
-  const colors = colorsFor(shown.map(row => row.project))
-  return shown.map(row => ({ project: row.project, name: shortProject(row.project), color: colors.get(row.project)!, selected: row.selected }))
-}
+const chartRowsOf = (report: Report): SelectedRow[] =>
+  report.summary.rows
+    .filter(row => isShown(row.selected) || isShown(row.claude))
+    .map(row => ({ project: row.project, name: shortProject(row.project), color: colorOf(report.colors, row.project), selected: row.selected }))
 
 const chart = ({ ui, tab, width }: PaneInput, Svg: SvgElement, report: Report, rows: SelectedRow[]) => {
   const { Box, Text } = ui

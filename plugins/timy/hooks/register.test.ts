@@ -2,6 +2,8 @@ import type { On, ProcessRunResult, PromptEditInput, RenderElement } from 'claud
 import { describe, expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
+import { PALETTE } from './charts'
+
 const SURFACES = ['terminal', 'desktop'] as const
 const at = (d: number, h: number, m: number) => new Date(2026, 9, d, h, m).getTime()
 const DIR = '/home/x/.claude/timy'
@@ -843,6 +845,19 @@ describe('/timy charts', () => {
     expect(texts).not.toContain('aktiv')
     expect(texts.some(t => t.startsWith('● shop 1:40 '))).toBe(true)
     expect(texts.some(t => t.includes('#12 Login-Seite'))).toBe(false)
+  })
+
+  test('a project keeps the colour remembered in the data folder', async ($, on) => {
+    const env = engine(on, { ...reportFiles, [`${DIR}/colors.json`]: JSON.stringify({ 'beispiel/blog': 3 }) })
+    const clock = mock.clock(on, { now: at(15, 18, 0) })
+    await $.session.start(startOf('desktop'))
+    await clock.settle()
+    const ui = await openZeit($, 'desktop', 80, 'grafik')
+    const [svg] = await svgsOf(ui)
+    expect(svg?.source).toContain(`fill="${PALETTE[3]}" fill-opacity="1"><title>blog · aktiv`)
+    const saved = JSON.parse(env.files.get(`${DIR}/colors.json`)!)
+    expect(saved['beispiel/blog']).toBe(3)
+    expect(saved['beispiel/shop']).toBe(0)
   })
 
   test('today names the parallel time when two sessions overlapped', async ($, on) => {

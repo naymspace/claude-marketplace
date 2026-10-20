@@ -102,5 +102,20 @@ const loadDay = async (fs: Fs, folder: string): Promise<TimyEvent[]> => {
   return texts.flatMap(text => text.split('\n').flatMap(line => fromLine(line) ?? []))
 }
 
+const colorsFile = (dir: string) => `${dir}/colors.json`
+
+export const readColors = async (fs: Fs, dir: string): Promise<Record<string, number>> => {
+  try {
+    if (!(await fs.exists(colorsFile(dir)))) return {}
+    const raw: unknown = JSON.parse(await fs.read(colorsFile(dir)))
+    if (typeof raw !== 'object' || raw === null) return {}
+    return Object.fromEntries(Object.entries(raw).filter((entry): entry is [string, number] => Number.isInteger(entry[1]) && entry[1] >= 0))
+  } catch {
+    return {}
+  }
+}
+
+export const writeColors = (fs: Fs, dir: string, colors: Readonly<Record<string, number>>) => fs.write(colorsFile(dir), `${JSON.stringify(colors, null, 2)}\n`)
+
 export const loadDays = async (fs: Fs, dir: string, days: readonly string[]): Promise<TimyEvent[]> =>
   (await Promise.all(days.map(day => loadDay(fs, `${dir}/${day}`)))).flat()

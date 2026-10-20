@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { PALETTE, barsSvg as barsChart, colorsFor, parallelRanges, timelineSvg as timelineChart } from './charts'
+import { PALETTE, assignColors, barsSvg as barsChart, colorOf, parallelRanges, timelineSvg as timelineChart } from './charts'
 import { HOUR } from './model'
 import type { Span } from './model'
 import { dayLabels } from './period'
@@ -51,8 +51,8 @@ describe('parallelRanges', () => {
 })
 
 const withColors = (rows: readonly { project: string; name: string }[]) => {
-  const colors = colorsFor(rows.map(row => row.project))
-  return rows.map(row => ({ ...row, color: colors.get(row.project)! }))
+  const colors = assignColors({}, rows.map(row => row.project))
+  return rows.map(row => ({ ...row, color: colorOf(colors, row.project) }))
 }
 
 describe('timelineSvg', () => {
@@ -182,15 +182,20 @@ describe('barsSvg', () => {
   })
 })
 
-describe('colorsFor', () => {
-  test('a project keeps its colour in any order', () => {
-    const today = colorsFor(['firma/shop', 'firma/blog', 'firma/app'])
-    const week = colorsFor(['firma/app', 'firma/shop', 'firma/blog'])
-    for (const project of ['firma/shop', 'firma/blog', 'firma/app']) expect(week.get(project)).toBe(today.get(project))
+describe('assignColors', () => {
+  test('keeps the colours it already gave', () => {
+    expect(assignColors({ 'firma/shop': 3 }, ['firma/blog', 'firma/shop'])['firma/shop']).toBe(3)
   })
 
-  test('projects shown together get different colours', () => {
-    const projects = Array.from({ length: PALETTE.length }, (_, i) => `firma/projekt-${i}`)
-    expect(new Set(colorsFor(projects).values()).size).toBe(PALETTE.length)
+  test('a new project gets the least used colour', () => {
+    const colors = assignColors({ 'firma/shop': 0, 'firma/blog': 1 }, ['firma/app'])
+    expect(colors['firma/app']).toBe(2)
+  })
+
+  test('projects get different colours until the palette is used up', () => {
+    const projects = Array.from({ length: PALETTE.length + 1 }, (_, i) => `firma/projekt-${i}`)
+    const colors = assignColors({}, projects)
+    expect(new Set(projects.slice(0, PALETTE.length).map(project => colors[project])).size).toBe(PALETTE.length)
+    expect(colors[projects.at(-1)!]).toBe(0)
   })
 })

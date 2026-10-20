@@ -22,7 +22,7 @@ One file per session and day under `~/.claude/timy`, one line per event:
 {"t":"2026-10-15T09:24:00.000Z","type":"submit","project":"firma/shop","session":"3f2a9c1e-5b7d-4e8a-9c21-6d0f4b8a7e13","branch":"feature/12-login","title":"#12 Login page"}
 ```
 
-Prompts or answers are not in there. If you want to start over, delete the folder.
+Next to them `colors.json` remembers which colour each project has in the charts. Prompts or answers are not in there. If you want to start over, delete the folder.
 
 ## Install
 

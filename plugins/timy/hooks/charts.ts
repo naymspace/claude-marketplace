@@ -6,19 +6,19 @@ const MUTED = '#888780'
 const FONT = 'font-family="system-ui, sans-serif" font-size="13"'
 const CHAR_PX = 8
 
-const hashOf = (text: string) => [...text].reduce((hash, c) => (hash * 31 + c.codePointAt(0)!) >>> 0, 7)
+export type Colors = Readonly<Record<string, number>>
 
-export const colorsFor = (projects: readonly string[]): Map<string, string> => {
-  const taken = new Set<number>()
-  const colors = new Map<string, string>()
-  for (const project of [...new Set(projects)].sort()) {
-    let i = hashOf(project) % PALETTE.length
-    while (taken.has(i) && taken.size < PALETTE.length) i = (i + 1) % PALETTE.length
-    taken.add(i)
-    colors.set(project, PALETTE[i]!)
+export const assignColors = (known: Colors, projects: readonly string[]): Colors => {
+  const colors: Record<string, number> = { ...known }
+  for (const project of projects) {
+    if (project in colors) continue
+    const uses = PALETTE.map((_, i) => Object.values(colors).filter(used => used === i).length)
+    colors[project] = uses.indexOf(Math.min(...uses))
   }
   return colors
 }
+
+export const colorOf = (colors: Colors, project: string): string => PALETTE[(colors[project] ?? 0) % PALETTE.length]!
 
 const escapeXml = (text: string): string =>
   text.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[c]!)

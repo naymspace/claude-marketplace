@@ -3,13 +3,14 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import { renderBand, renderBandNote } from './band'
 import type { Live } from './band'
-import { allSpans, unionLength, dayTarget, pad, projectName, sessionLabels, sessionState, shortProject, summarize } from './model'
+import { allSpans, unionLength, dayTarget, projectName, sessionLabels, sessionState, shortProject, summarize } from './model'
 import type { EventType } from './model'
 import { renderPane } from './pane'
 import type { Report, View } from './pane'
 import { dayLabels, periodTitle, rangeOf } from './period'
 import type { Tab } from './period'
-import { SessionLog, addDays, dayKey, dayStart, daysBetween, loadDays } from './store'
+import { SessionLog, addDays, dayKey, dayStart, daysBetween, loadDays, readColors, writeColors } from './store'
+import { assignColors } from './charts'
 import type { Fs } from './store'
 
 const EDIT_THROTTLE_MS = 10_000
@@ -143,12 +144,17 @@ const buildReport = async ($: EngineInterface, c: Ctx, tab: Tab, offset: number)
       active: unionLength(spans, 'selected', day, addDays(day, 1)),
     })
   }
+  const summary = summarize(spans, labels, from, to)
+  const known = await readColors(c.fs, c.dir)
+  const colors = assignColors(known, summary.rows.map(row => row.project))
+  if (Object.keys(colors).length > Object.keys(known).length) await writeColors(c.fs, c.dir, colors).catch(() => undefined)
   return {
     from,
     to,
     title: periodTitle(tab, offset, from),
     now,
-    summary: summarize(spans, labels, from, to),
+    summary,
+    colors,
     spans: tab === 'heute' ? spans : [],
     days: days.filter(day => day.target > 0 || day.active > 0),
   }
