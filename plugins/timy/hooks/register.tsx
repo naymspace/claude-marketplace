@@ -7,13 +7,14 @@ import { allSpans, unionLength, dayTarget, pad, projectName, sessionLabels, sess
 import type { EventType } from './model'
 import { renderPane } from './pane'
 import type { Report, View } from './pane'
-import { dayLabel, periodTitle, rangeOf } from './period'
+import { dayLabels, periodTitle, rangeOf } from './period'
 import type { Tab } from './period'
 import { SessionLog, addDays, dayKey, dayStart, daysBetween, loadDays } from './store'
 import type { Fs } from './store'
 
 const EDIT_THROTTLE_MS = 10_000
 const PANE = 'timy'
+const PANE_WINDOW = { id: PANE, title: 'timy', closeOnEscape: true } as const
 const BAND_DRAWN = { plugin: 'timy', key: 'band' } as const
 const PANE_DRAWN = { plugin: 'timy', key: 'pane' } as const
 
@@ -88,7 +89,6 @@ const refreshLive = async ($: EngineInterface) => {
       projectOthers: (row?.selected ?? 0) - state.selected,
       dayAtRefresh: unionLength(spans, 'selected', from, addDays(from, 1)),
       sessionAtRefresh: state.selected,
-      day: dayKey(from),
       target: dayTarget(ctx.hoursPerWeekday, from),
       mine,
       sessionToday: state.selected,
@@ -137,9 +137,7 @@ const buildReport = async ($: EngineInterface, c: Ctx, tab: Tab, offset: number)
   const days: Report['days'] = []
   for (let day = from; day < to; day = addDays(day, 1)) {
     days.push({
-      key: dayKey(day),
-      label: dayLabel(day),
-      short: pad(new Date(day).getDate()),
+      labels: dayLabels(day),
       target: dayTarget(c.hoursPerWeekday, day),
       byProject: summarize(spans, labels, day, addDays(day, 1)).rows.map(row => [row.project, row.selected] as const),
       active: unionLength(spans, 'selected', day, addDays(day, 1)),
@@ -148,7 +146,7 @@ const buildReport = async ($: EngineInterface, c: Ctx, tab: Tab, offset: number)
   return {
     from,
     to,
-    title: periodTitle(tab, offset, from, now),
+    title: periodTitle(tab, offset, from),
     now,
     summary: summarize(spans, labels, from, to),
     spans: tab === 'heute' ? spans : [],
@@ -158,7 +156,7 @@ const buildReport = async ($: EngineInterface, c: Ctx, tab: Tab, offset: number)
 
 const isShowing = (tab: Tab, offset: number) => pane.tab === tab && pane.offset === offset
 
-const showReport = async ($: EngineInterface, tab: Tab, offset: number, built: Report) => {
+const showReport = ($: EngineInterface, tab: Tab, offset: number, built: Report) => {
   pane.seen.set(`${tab}:${offset}`, built)
   if (!isShowing(tab, offset)) return
   pane.report = built
@@ -190,7 +188,7 @@ const loadReport = async ($: EngineInterface, previous: Shown | null = null) => 
     redrawPane($)
     return
   }
-  await showReport($, tab, offset, built)
+  showReport($, tab, offset, built)
 }
 
 const refreshPane = async ($: EngineInterface) => {
@@ -199,7 +197,7 @@ const refreshPane = async ($: EngineInterface) => {
   const { tab, offset } = pane
   try {
     if (!(await $.ui.panes()).some(shown => shown.id === PANE && shown.isShown)) return
-    await showReport($, tab, offset, await buildReport($, ctx, tab, offset))
+    showReport($, tab, offset, await buildReport($, ctx, tab, offset))
   } catch {
     // a closed pane or an unreadable day log keeps the shown report
   }
@@ -216,7 +214,7 @@ const openPane = async ($: EngineInterface) => {
   pane.tab = 'heute'
   pane.offset = 0
   await loadReport($)
-  const opened = await $.ui.open({ id: PANE, title: 'timy', focus: true, closeOnEscape: true })
+  const opened = await $.ui.open({ ...PANE_WINDOW, focus: true })
   if (!opened.isPlaced) {
     $.ui.toast(`timy: Panel wird hier nicht angezeigt (${opened.reason}), Übersicht steht über dem Eingabefeld`)
     band.isUnfolded = true
@@ -228,7 +226,7 @@ const reopenPane = async ($: EngineInterface) => {
   try {
     if (!(await $.ui.panes()).some(shown => shown.id === PANE)) return
     await loadReport($)
-    await $.ui.open({ id: PANE, title: 'timy', closeOnEscape: true })
+    await $.ui.open(PANE_WINDOW)
   } catch {}
 }
 
@@ -340,7 +338,7 @@ export const register: Register = (on, options) => {
 
   on('prompt.submit', async ($, e, next) => {
     if (e.origin.kind === 'composer' || e.origin.kind === 'bridge') {
-      await readTitle($)
+      void readTitle($)
       await record($, 'submit')
     }
     return next(e)

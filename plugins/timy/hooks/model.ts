@@ -2,9 +2,9 @@ export const EVENT_TYPES = ['attach', 'detach', 'edit', 'submit', 'turn-start', 
 
 export type EventType = (typeof EVENT_TYPES)[number]
 
-export type ZeitEvent = { t: number; type: EventType; project: string; session: string; title?: string; branch?: string }
+export type TimyEvent = { t: number; type: EventType; project: string; session: string; title?: string; branch?: string }
 
-export type Kind = 'selected' | 'writing' | 'claude'
+type Kind = 'selected' | 'writing' | 'claude'
 
 export type Span = { kind: Kind; project: string; session: string; start: number; end: number }
 
@@ -35,7 +35,7 @@ const WRITING_GAP_MS = 30_000
 const EDIT_SLICE_MS = 10_000
 const OPEN_CAP_MS = 2 * HOUR
 
-export const sessionSpans = (events: readonly ZeitEvent[], idleMs: number, now: number): Span[] => {
+export const sessionSpans = (events: readonly TimyEvent[], idleMs: number, now: number): Span[] => {
   const sorted = [...events].sort((a, b) => a.t - b.t)
   const last = sorted.at(-1)
   if (last === undefined) return []
@@ -100,7 +100,7 @@ export const sessionSpans = (events: readonly ZeitEvent[], idleMs: number, now: 
 }
 
 export const sessionState = (
-  events: readonly ZeitEvent[],
+  events: readonly TimyEvent[],
   idleMs: number,
   now: number,
   from: number,
@@ -115,8 +115,8 @@ export const sessionState = (
 export const unionLength = (spans: readonly Span[], kind: Kind, from: number, to: number): number =>
   merge(clip(spans.filter(span => span.kind === kind), from, to)).reduce((sum, [start, end]) => sum + end - start, 0)
 
-export const allSpans = (events: readonly ZeitEvent[], idleMs: number, now: number): Span[] => {
-  const bySession = new Map<string, ZeitEvent[]>()
+export const allSpans = (events: readonly TimyEvent[], idleMs: number, now: number): Span[] => {
+  const bySession = new Map<string, TimyEvent[]>()
   for (const event of events) {
     const list = bySession.get(event.session) ?? []
     list.push(event)
@@ -125,7 +125,7 @@ export const allSpans = (events: readonly ZeitEvent[], idleMs: number, now: numb
   return [...bySession.values()].flatMap(list => sessionSpans(list, idleMs, now))
 }
 
-export type ProjectRow = {
+type ProjectRow = {
   project: string
   selected: number
   writing: number
@@ -135,7 +135,7 @@ export type ProjectRow = {
 
 export type Summary = { rows: ProjectRow[] }
 
-export const sessionLabels = (events: readonly ZeitEvent[]): Map<string, string> => {
+export const sessionLabels = (events: readonly TimyEvent[]): Map<string, string> => {
   const titles = new Map<string, string>()
   const branches = new Map<string, string>()
   for (const event of [...events].sort((a, b) => a.t - b.t)) {
@@ -174,9 +174,8 @@ export const planPercent = (actual: number, planned: number): number => (planned
 export const fillColor = (actual: number, planned: number): 'success' | 'warning' | 'error' =>
   actual <= planned ? 'success' : actual <= planned * 1.1 ? 'warning' : 'error'
 
-const BAR_WIDTH = 10
 
-export const planFilled = (actual: number, planned: number, width = BAR_WIDTH): number =>
+export const planFilled = (actual: number, planned: number, width: number): number =>
   planned > 0 ? Math.min(width, Math.round((actual / planned) * width)) : 0
 
 export const dayTarget = (hoursPerWeekday: string, t: number): number => {

@@ -1,7 +1,7 @@
 import type { RenderNode } from 'claude-code'
 
 import { fillColor, hm, hms, planFilled } from './model'
-import type { Summary, ZeitEvent } from './model'
+import type { Summary, TimyEvent } from './model'
 import { COLUMNS, allOpen, bar, summaryRows, table } from './table'
 import type { Ui } from './table'
 
@@ -10,9 +10,8 @@ export type Live = {
   projectOthers: number
   dayAtRefresh: number
   sessionAtRefresh: number
-  day: string
   target: number
-  mine: ZeitEvent[]
+  mine: TimyEvent[]
   sessionToday: number
   isCounting: boolean
   today: Summary
@@ -52,7 +51,7 @@ export const renderBand = ({ ui, live, width, maxRows, isUnfolded, theirs, onTog
         <Box flexDirection="row" columnGap={1}>
           <Text color={live.isCounting ? 'success' : 'warning'}>●</Text>
           <Button
-            key="zeit-toggle"
+            key="timy-toggle"
             plain
             dimColor
             label={
@@ -73,7 +72,7 @@ export const renderBand = ({ ui, live, width, maxRows, isUnfolded, theirs, onTog
               : null}
           </Box>
         )}
-        <Button key="zeit-open" plain dimColor label="⤢" onPress={onOpen} />
+        <Button key="timy-open" plain dimColor label="⤢" onPress={onOpen} />
       </Box>
       {theirs}
     </Box>

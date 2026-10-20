@@ -17,12 +17,12 @@ export type Report = {
   now: number
   summary: Summary
   spans: Span[]
-  days: (ChartDay & { key: string; active: number })[]
+  days: (ChartDay & { active: number })[]
 }
 
 type SvgElement = Extract<Ui, { Svg: unknown }>['Svg']
 
-export type PaneInput = {
+type PaneInput = {
   ui: Ui
   svg: SvgElement | null
   width: number
@@ -143,10 +143,11 @@ const card = ({ ui, tab }: PaneInput, report: Report) => {
 
 type SelectedRow = ChartRow & { selected: number }
 
-const chartRowsOf = (report: Report): SelectedRow[] =>
-  report.summary.rows
-    .filter(row => isShown(row.selected) || isShown(row.claude))
-    .map(row => ({ project: row.project, name: shortProject(row.project), selected: row.selected }))
+const chartRowsOf = (report: Report): SelectedRow[] => {
+  const shown = report.summary.rows.filter(row => isShown(row.selected) || isShown(row.claude))
+  const colors = colorsFor(shown.map(row => row.project))
+  return shown.map(row => ({ project: row.project, name: shortProject(row.project), color: colors.get(row.project)!, selected: row.selected }))
+}
 
 const chart = ({ ui, tab, width }: PaneInput, Svg: SvgElement, report: Report, rows: SelectedRow[]) => {
   const { Box, Text } = ui
@@ -189,8 +190,8 @@ const perDay = ({ ui }: PaneInput, layout: Layout, report: Report) => {
     .filter(day => day.active > 0)
     .map(
       (day): Row => ({
-        key: `day-${day.label}`,
-        name: day.label,
+        key: `day-${day.labels[0]}`,
+        name: day.labels[0]!,
         values: [hm(day.active), hm(day.target)],
         style: 'plain',
         ...(day.target > 0 ? { bar: { actual: day.active, planned: day.target, color: fillColor(day.active, day.target) } } : {}),
@@ -221,7 +222,7 @@ export const renderPane = (p: PaneInput) => {
   }
   const layout = layoutOf(p.width)
   const rows = chartRowsOf(report)
-  const dots = Svg === null ? new Map<string, string>() : colorsFor(rows.map(row => row.project))
+  const dots = Svg === null ? new Map<string, string>() : new Map(rows.map(row => [row.project, row.color]))
   const summary = table(p.ui, COLUMNS, summaryRows(report.summary, folding(p, Svg !== null), dots), layout.columnWidth)
   const hasPerDay = Svg === null && p.tab !== 'heute' && report.days.some(day => day.active > 0)
   return (

@@ -1,10 +1,11 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { PALETTE, barsSvg as barsChart, colorsFor, escapeXml, parallelRanges, timelineSvg as timelineChart } from './charts'
+import { PALETTE, barsSvg as barsChart, colorsFor, parallelRanges, timelineSvg as timelineChart } from './charts'
+import { HOUR } from './model'
 import type { Span } from './model'
+import { dayLabels } from './period'
 
 const at = (h: number, m: number) => new Date(2026, 9, 16, h, m).getTime()
-const HOUR = 3_600_000
 const span = (kind: Span['kind'], session: string, start: number, end: number, project = 'beispiel/shop'): Span => ({
   kind,
   session,
@@ -49,11 +50,16 @@ describe('parallelRanges', () => {
   })
 })
 
+const withColors = (rows: readonly { project: string; name: string }[]) => {
+  const colors = colorsFor(rows.map(row => row.project))
+  return rows.map(row => ({ ...row, color: colors.get(row.project)! }))
+}
+
 describe('timelineSvg', () => {
-  const rows = [
+  const rows = withColors([
     { project: 'beispiel/shop', name: 'shop' },
     { project: 'beispiel/blog', name: 'blog' },
-  ]
+  ])
   const spans = [
     span('selected', 'a', at(9, 15), at(10, 0)),
     span('claude', 'a', at(9, 20), at(9, 40)),
@@ -68,10 +74,9 @@ describe('timelineSvg', () => {
   })
 
   test('draws each project in its own colour with a tooltip', () => {
-    const colors = colorsFor(['beispiel/shop', 'beispiel/blog'])
-    expect(svg).toContain(`fill="${colors.get('beispiel/shop')}" fill-opacity="1"><title>shop · aktiv 09:15–10:00 (0:45)</title>`)
-    expect(svg).toContain(`fill="${colors.get('beispiel/shop')}" fill-opacity="0.65"><title>shop · Claude 09:20–09:40 (0:20)</title>`)
-    expect(svg).toContain(`fill="${colors.get('beispiel/blog')}" fill-opacity="1"><title>blog · aktiv 10:00–11:30 (1:30)</title>`)
+    expect(svg).toContain(`fill="${rows[0]!.color}" fill-opacity="1"><title>shop · aktiv 09:15–10:00 (0:45)</title>`)
+    expect(svg).toContain(`fill="${rows[0]!.color}" fill-opacity="0.65"><title>shop · Claude 09:20–09:40 (0:20)</title>`)
+    expect(svg).toContain(`fill="${rows[1]!.color}" fill-opacity="1"><title>blog · aktiv 10:00–11:30 (1:30)</title>`)
   })
 
   test('marks now with a pulsing line', () => {
@@ -106,7 +111,7 @@ describe('timelineSvg', () => {
   test('the label column fits the longest name in a narrow pane', () => {
     const narrow = timelineSvg({
       spans: [span('selected', 'a', at(9, 0), at(10, 0), '')],
-      rows: [{ project: '', name: 'ohne Projekt' }],
+      rows: withColors([{ project: '', name: 'ohne Projekt' }]),
       from: at(4, 0),
       to: at(4, 0) + 24 * HOUR,
       now: at(11, 0),
@@ -118,7 +123,7 @@ describe('timelineSvg', () => {
   test('a name too long for the column is cut with an ellipsis', () => {
     const tight = timelineSvg({
       spans: [span('selected', 'a', at(9, 0), at(10, 0), 'x/y')],
-      rows: [{ project: 'x/y', name: 'ein sehr langer Projektname' }],
+      rows: withColors([{ project: 'x/y', name: 'ein sehr langer Projektname' }]),
       from: at(4, 0),
       to: at(4, 0) + 24 * HOUR,
       now: at(11, 0),
@@ -132,7 +137,7 @@ describe('timelineSvg', () => {
   test('escapes project names', () => {
     const odd = timelineSvg({
       spans: [span('selected', 'a', at(9, 0), at(10, 0), 'x/<b>&')],
-      rows: [{ project: 'x/<b>&', name: '<b>&' }],
+      rows: withColors([{ project: 'x/<b>&', name: '<b>&' }]),
       from: at(4, 0),
       to: at(4, 0) + 24 * HOUR,
       now: at(11, 0),
@@ -144,20 +149,19 @@ describe('timelineSvg', () => {
 })
 
 describe('barsSvg', () => {
-  const rows = [
+  const rows = withColors([
     { project: 'beispiel/shop', name: 'shop' },
     { project: 'beispiel/blog', name: 'blog' },
-  ]
+  ])
   const days = [
-    { label: 'Mo 12.10.', short: '12', target: 6 * HOUR, byProject: [['beispiel/shop', 2 * HOUR], ['beispiel/blog', 3 * HOUR]] as const },
-    { label: 'Di 13.10.', short: '13', target: 6 * HOUR, byProject: [] },
+    { labels: ['Mo 12.10.', 'Mo 12.', '12'], target: 6 * HOUR, byProject: [['beispiel/shop', 2 * HOUR], ['beispiel/blog', 3 * HOUR]] as const },
+    { labels: ['Di 13.10.', 'Di 13.', '13'], target: 6 * HOUR, byProject: [] },
   ]
 
   test('stacks projects per day in the timeline colours', () => {
     const svg = barsSvg({ days, rows, width: 600 })
-    const colors = colorsFor(rows.map(row => row.project))
-    expect(svg).toContain(`fill="${colors.get(rows[0]!.project)}"><title>Mo 12.10. · shop 2:00</title>`)
-    expect(svg).toContain(`fill="${colors.get(rows[1]!.project)}"><title>Mo 12.10. · blog 3:00</title>`)
+    expect(svg).toContain(`fill="${rows[0]!.color}"><title>Mo 12.10. · shop 2:00</title>`)
+    expect(svg).toContain(`fill="${rows[1]!.color}"><title>Mo 12.10. · blog 3:00</title>`)
   })
 
   test('shows the day target as a dashed line', () => {
@@ -169,7 +173,7 @@ describe('barsSvg', () => {
   })
 
   test('a narrower week slot drops the month, then the weekday', () => {
-    const week = ['Mo 19.10.', 'Di 20.10.', 'Mi 21.10.', 'Do 22.10.', 'Fr 23.10.'].map(label => ({ label, short: label.slice(3, 5), target: 0, byProject: [] }))
+    const week = [19, 20, 21, 22, 23].map(d => ({ labels: dayLabels(new Date(2026, 9, d).getTime()), target: 0, byProject: [] }))
     expect(barsSvg({ days: week, rows, width: 36 + 5 * 90 })).toContain('>Mo 19.10.</text>')
     expect(barsSvg({ days: week, rows, width: 36 + 5 * 60 })).toContain('>Mo 19.</text>')
     const narrow = barsSvg({ days: week, rows, width: 36 + 5 * 40 })
@@ -188,11 +192,5 @@ describe('colorsFor', () => {
   test('projects shown together get different colours', () => {
     const projects = Array.from({ length: PALETTE.length }, (_, i) => `firma/projekt-${i}`)
     expect(new Set(colorsFor(projects).values()).size).toBe(PALETTE.length)
-  })
-})
-
-describe('escapeXml', () => {
-  test('escapes markup characters', () => {
-    expect(escapeXml(`a<b>&"c'`)).toBe('a&lt;b&gt;&amp;&quot;c&apos;')
   })
 })

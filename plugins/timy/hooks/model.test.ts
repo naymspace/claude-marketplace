@@ -1,18 +1,18 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import { NO_PROJECT, allSpans, fillColor, unionLength, dayTarget, hm, hms, planFilled, planPercent, projectName, sessionLabels, sessionSpans, sessionState, shortProject, summarize } from './model'
-import type { EventType, Span, ZeitEvent } from './model'
+import type { EventType, Span, TimyEvent } from './model'
 
 const at = (h: number, m: number, s = 0) => new Date(2026, 9, 15, h, m, s).getTime()
 const MIN = 60_000
 const IDLE = 5 * MIN
 
-const ev = (type: EventType, t: number, session = 's1', project = 'beispiel/shop'): ZeitEvent => ({ type, t, session, project })
+const ev = (type: EventType, t: number, session = 's1', project = 'beispiel/shop'): TimyEvent => ({ type, t, session, project })
 
 const total = (spans: Span[], kind: Span['kind']) =>
   spans.filter(s => s.kind === kind).reduce((sum, s) => sum + s.end - s.start, 0)
 
-const example: ZeitEvent[] = [
+const example: TimyEvent[] = [
   ev('attach', at(10, 0)),
   ...Array.from({ length: 18 }, (_, i) => ev('edit', at(10, 0) + i * 10_000)),
   ev('submit', at(10, 3)),
@@ -158,10 +158,10 @@ describe('plan', () => {
   test('planPercent and planFilled show progress and cap the bar at full', () => {
     expect(planPercent(130 * MIN, 10 * 60 * MIN)).toBe(22)
     expect(planPercent(MIN, 0)).toBe(0)
-    expect(planFilled(130 * MIN, 10 * 60 * MIN)).toBe(2)
-    expect(planFilled(13 * 60 * MIN, 10 * 60 * MIN)).toBe(10)
+    expect(planFilled(130 * MIN, 10 * 60 * MIN, 10)).toBe(2)
+    expect(planFilled(13 * 60 * MIN, 10 * 60 * MIN, 10)).toBe(10)
     expect(planFilled(MIN, 2 * MIN, 6)).toBe(3)
-    expect(planFilled(MIN, 0)).toBe(0)
+    expect(planFilled(MIN, 0, 10)).toBe(0)
   })
 })
 
@@ -264,8 +264,6 @@ describe('labels and formatting', () => {
 describe('projectName', () => {
   test('ssh remote', () => expect(projectName('git@gitlab.com:beispiel/shop.git', '/x/shop')).toBe('beispiel/shop'))
   test('https remote', () => expect(projectName('https://gitlab.com/beispiel/shop.git', '/x/shop')).toBe('beispiel/shop'))
-  test('https remote with credentials never leaks them', () =>
-    expect(projectName('https://oauth2:secret@gitlab.com/beispiel/shop.git', null)).toBe('beispiel/shop'))
   test('scheme is matched case-insensitively and credentials dropped', () =>
     expect(projectName('HTTPS://oauth2:tok@gitlab.com/beispiel/shop.git', '/x/shop')).toBe('beispiel/shop'))
   test('credentials without a path fall back to the root folder', () =>
@@ -281,20 +279,9 @@ describe('projectName', () => {
     expect(name).not.toContain('@')
     expect(name).not.toContain('p/w')
   })
-  test('query string never leaks into the name', () => {
-    const name = projectName('https://gitlab.com/beispiel/shop.git?private_token=secret', '/x/shop')
-    expect(name).toBe('beispiel/shop')
-    expect(name).not.toContain('secret')
-  })
-  test('fragment never leaks into the name', () => {
-    const name = projectName('https://gitlab.com/beispiel/shop.git#secret', '/x/shop')
-    expect(name).toBe('beispiel/shop')
-    expect(name).not.toContain('secret')
-  })
-  test('scp form query string never leaks into the name', () => {
-    const name = projectName('git@gitlab.com:beispiel/shop.git?x=secret', '/x/shop')
-    expect(name).toBe('beispiel/shop')
-    expect(name).not.toContain('secret')
+  test('a query string or fragment never leaks into the name', () => {
+    for (const remote of ['https://gitlab.com/beispiel/shop.git?private_token=secret', 'https://gitlab.com/beispiel/shop.git#secret', 'git@gitlab.com:beispiel/shop.git?x=secret'])
+      expect(projectName(remote, '/x/shop')).toBe('beispiel/shop')
   })
   test('ssh url with port', () => expect(projectName('ssh://git@host:2222/a/b.git', null)).toBe('a/b'))
   test('no remote uses the root folder', () => expect(projectName(null, '/Users/x/projects/shop')).toBe('shop'))

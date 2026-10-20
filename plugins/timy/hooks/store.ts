@@ -1,5 +1,5 @@
 import { EVENT_TYPES, mondayIndex, pad } from './model'
-import type { ZeitEvent } from './model'
+import type { TimyEvent } from './model'
 
 export type Fs = {
   read: (path: string) => Promise<string>
@@ -50,9 +50,9 @@ export const daysBetween = (from: number, to: number): string[] => {
   return days
 }
 
-const toLine = (event: ZeitEvent): string => JSON.stringify({ ...event, t: new Date(event.t).toISOString() })
+const toLine = (event: TimyEvent): string => JSON.stringify({ ...event, t: new Date(event.t).toISOString() })
 
-const fromLine = (line: string): ZeitEvent | null => {
+const fromLine = (line: string): TimyEvent | null => {
   try {
     const raw = JSON.parse(line)
     const t = Date.parse(raw.t)
@@ -76,13 +76,13 @@ export class SessionLog {
     private readonly session: string,
   ) {}
 
-  append(event: ZeitEvent): Promise<void> {
+  append(event: TimyEvent): Promise<void> {
     const run = this.queue.then(() => this.write(event))
     this.queue = run.catch(() => {})
     return run
   }
 
-  private async write(event: ZeitEvent): Promise<void> {
+  private async write(event: TimyEvent): Promise<void> {
     const day = dayKey(event.t)
     const path = `${this.dir}/${day}/${this.session}.jsonl`
     if (day !== this.day) {
@@ -95,12 +95,12 @@ export class SessionLog {
   }
 }
 
-const loadDay = async (fs: Fs, folder: string): Promise<ZeitEvent[]> => {
+const loadDay = async (fs: Fs, folder: string): Promise<TimyEvent[]> => {
   if (!(await fs.exists(folder))) return []
   const files = (await fs.list(folder)).filter(entry => entry.kind === 'file' && entry.name.endsWith('.jsonl'))
   const texts = await Promise.all(files.map(entry => fs.read(`${folder}/${entry.name}`)))
-  return texts.flatMap(text => text.split('\n').flatMap(line => (line.trim() ? (fromLine(line) ?? []) : [])))
+  return texts.flatMap(text => text.split('\n').flatMap(line => fromLine(line) ?? []))
 }
 
-export const loadDays = async (fs: Fs, dir: string, days: readonly string[]): Promise<ZeitEvent[]> =>
+export const loadDays = async (fs: Fs, dir: string, days: readonly string[]): Promise<TimyEvent[]> =>
   (await Promise.all(days.map(day => loadDay(fs, `${dir}/${day}`)))).flat()

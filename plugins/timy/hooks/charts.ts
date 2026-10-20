@@ -4,7 +4,7 @@ import type { Range, Span } from './model'
 export const PALETTE = ['#1D9E75', '#7F77DD', '#D85A30', '#378ADD', '#D4537E', '#639922', '#BA7517']
 const MUTED = '#888780'
 const FONT = 'font-family="system-ui, sans-serif" font-size="13"'
-const CHAR_PX = 7
+const CHAR_PX = 8
 
 const hashOf = (text: string) => [...text].reduce((hash, c) => (hash * 31 + c.codePointAt(0)!) >>> 0, 7)
 
@@ -20,7 +20,7 @@ export const colorsFor = (projects: readonly string[]): Map<string, string> => {
   return colors
 }
 
-export const escapeXml = (text: string): string =>
+const escapeXml = (text: string): string =>
   text.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[c]!)
 
 export const parallelRanges = (spans: readonly Span[], from: number, to: number): Range[] => {
@@ -47,9 +47,9 @@ export const parallelRanges = (spans: readonly Span[], from: number, to: number)
   return merge(ranges)
 }
 
-export type ChartRow = { project: string; name: string }
+export type ChartRow = { project: string; name: string; color: string }
 
-export type Chart = { source: string; width: number; height: number }
+type Chart = { source: string; width: number; height: number }
 
 const chart = (width: number, height: number, parts: readonly string[]): Chart => ({
   source: `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${parts.join('')}</svg>`,
@@ -69,7 +69,6 @@ const floorHour = (t: number) => {
 }
 
 const LABEL_GAP = 8
-const LABEL_CHAR_PX = 8
 const ROW = 30
 
 export const timelineSvg = ({
@@ -95,16 +94,15 @@ export const timelineSvg = ({
   const end = Math.max(floorHour(last) + HOUR, start + HOUR)
   const parallel = parallelRanges(spans, from, to)
   const longest = Math.max(0, ...rows.map(row => row.name.length), parallel.length > 0 ? 'parallel'.length : 0)
-  const labelWidth = Math.round(Math.min(140, width * 0.4, longest * LABEL_CHAR_PX + LABEL_GAP))
+  const labelWidth = Math.round(Math.min(140, width * 0.4, longest * CHAR_PX + LABEL_GAP))
   const fit = (text: string) =>
-    text.length * LABEL_CHAR_PX + LABEL_GAP <= labelWidth ? text : `${text.slice(0, Math.max(1, Math.floor((labelWidth - LABEL_GAP) / LABEL_CHAR_PX) - 1))}…`
+    text.length * CHAR_PX + LABEL_GAP <= labelWidth ? text : `${text.slice(0, Math.max(1, Math.floor((labelWidth - LABEL_GAP) / CHAR_PX) - 1))}…`
   const plot = width - labelWidth - LABEL_GAP - 12
   const x = (t: number) => labelWidth + LABEL_GAP + ((t - start) / (end - start)) * plot
   const w = ([a, b]: Range) => Math.max(1, x(b) - x(a))
   const height = 20 + rows.length * ROW + (parallel.length > 0 ? ROW : 0) + 4
   const hours = (end - start) / HOUR
   const every = Math.max(1, Math.ceil(hours / Math.max(1, Math.floor(plot / 48))))
-  const colors = colorsFor(rows.map(row => row.project))
   const parts: string[] = []
   for (let h = 0; h <= hours; h += every) {
     const t = start + h * HOUR
@@ -115,7 +113,7 @@ export const timelineSvg = ({
   }
   rows.forEach((row, i) => {
     const y = 20 + i * ROW
-    const color = colors.get(row.project)!
+    const color = row.color
     const name = escapeXml(row.name)
     parts.push(`<text x="${labelWidth}" y="${y + 15}" text-anchor="end" fill="${color}" ${FONT}>${escapeXml(fit(row.name))}</text>`)
     const own = spans.filter(s => s.project === row.project)
@@ -151,7 +149,7 @@ export const timelineSvg = ({
   return chart(width, height, parts)
 }
 
-export type ChartDay = { label: string; short: string; target: number; byProject: readonly (readonly [string, number])[] }
+export type ChartDay = { labels: readonly string[]; target: number; byProject: readonly (readonly [string, number])[] }
 
 export const barsSvg = ({ days, rows, width }: { days: readonly ChartDay[]; rows: readonly ChartRow[]; width: number }): Chart => {
   const height = 200
@@ -164,7 +162,7 @@ export const barsSvg = ({ days, rows, width }: { days: readonly ChartDay[]; rows
   const slot = (width - left - 8) / Math.max(1, days.length)
   const barWidth = Math.max(4, Math.min(40, slot * 0.6))
   const order = new Map(rows.map((row, i) => [row.project, i]))
-  const colors = colorsFor(rows.map(row => row.project))
+  const colors = new Map(rows.map(row => [row.project, row.color]))
   const step = Math.max(1, Math.ceil(maxHours / 4))
   const parts: string[] = []
   for (let h = 0; h <= maxHours; h += step) {
@@ -182,7 +180,7 @@ export const barsSvg = ({ days, rows, width }: { days: readonly ChartDay[]; rows
       const name = escapeXml(rows.find(row => row.project === project)?.name ?? shortProject(project))
       parts.push(
         `<rect x="${x0}" y="${y(reach + ms)}" width="${barWidth}" height="${y(reach) - y(reach + ms)}" fill="${colors.get(project) ?? MUTED}">` +
-          `<title>${escapeXml(day.label)} · ${name} ${hm(ms)}</title></rect>`,
+          `<title>${escapeXml(day.labels[0]!)} · ${name} ${hm(ms)}</title></rect>`,
       )
       reach += ms
     }
@@ -195,8 +193,7 @@ export const barsSvg = ({ days, rows, width }: { days: readonly ChartDay[]; rows
     if (totals[i]! > 0 && slot >= 30) {
       parts.push(`<text x="${cx}" y="${y(Math.max(totals[i]!, day.target)) - 7}" text-anchor="middle" fill="${MUTED}" ${FONT}>${hm(totals[i]!)}</text>`)
     }
-    const weekday = day.label.slice(0, 6)
-    const label = [day.label, weekday].find(text => slot >= text.length * CHAR_PX + 8) ?? day.short
+    const label = day.labels.find(text => slot >= text.length * CHAR_PX + 8) ?? day.labels.at(-1)!
     if (slot >= 14 || i % 2 === 0) {
       parts.push(`<text x="${cx}" y="${height - 6}" text-anchor="middle" fill="${MUTED}" ${FONT}>${escapeXml(label)}</text>`)
     }

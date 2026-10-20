@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import type { ZeitEvent } from './model'
+import type { TimyEvent } from './model'
 import { addDays, dayKey, dayStart, daysBetween, loadDays, monthStart, SessionLog, weekStart } from './store'
 import type { Fs } from './store'
 
@@ -21,7 +21,7 @@ const memoryFs = (files: Record<string, string> = {}) => {
   return { fs, files }
 }
 
-const event = (t: number, session = 's1'): ZeitEvent => ({ t, type: 'submit', project: 'beispiel/shop', session })
+const event = (t: number, session = 's1'): TimyEvent => ({ t, type: 'submit', project: 'beispiel/shop', session })
 
 const tick = async () => {
   for (let i = 0; i < 3; i++) await Promise.resolve()

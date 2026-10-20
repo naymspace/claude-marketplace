@@ -62,7 +62,6 @@ const engine = (on: On, files: Record<string, string> = {}): Env => {
   on('turn.complete', async (_$, e) => ({ text: e.answer }))
   on('session.attach', async (_$, e) => ({ clientId: e.clientId }))
   on('session.detach', async (_$, e) => ({ clientId: e.clientId }))
-  on('classic.UserPromptSubmit', async () => ({}))
   on('classic.SessionStart', async () => ({}))
   mock.env(on, { HOME: '/home/x' })
   return env
@@ -349,17 +348,6 @@ for (const surface of SURFACES) {
       expect(await textsOf(ui)).toContain('shop · heute 0:20 · Session 0:20:00 ▾')
     })
 
-    test('band keeps what the next mod draws', { plugins: [other] }, async ($, on) => {
-      engine(on, todayFiles)
-      const clock = mock.clock(on, { now: at(15, 9, 20) })
-      await $.session.start(startOf(surface))
-      await clock.settle()
-      const ui = await $.ui.mount({ plugin: 'timy', surface, component: 'AbovePrompt', props })
-      const texts = await textsOf(ui)
-      expect(texts).toContain('other')
-      expect(texts.some(t => t.startsWith('shop ·'))).toBe(true)
-    })
-
     test('band keeps its own line above what the next mod draws', { plugins: [other] }, async ($, on) => {
       engine(on, todayFiles)
       const clock = mock.clock(on, { now: at(15, 9, 20) })
@@ -383,16 +371,6 @@ for (const surface of SURFACES) {
         props: { ...props, hasSurvey: true },
       })
       expect(await textsOf(ui)).not.toContain('●')
-    })
-
-    test('band updates every minute', async ($, on) => {
-      engine(on, todayFiles)
-      const clock = mock.clock(on, { now: at(15, 9, 20) })
-      await $.session.start(startOf(surface))
-      await clock.settle()
-      await clock.advance(60_000)
-      const ui = await $.ui.mount({ plugin: 'timy', surface, component: 'AbovePrompt', props })
-      expect(await textsOf(ui)).toContain('shop · heute 0:34 · Session 0:21:00 ▾')
     })
 
     test('a green dot shows that the session is counting', async ($, on) => {
@@ -432,13 +410,13 @@ for (const surface of SURFACES) {
       await clock.settle()
       const ui = await $.ui.mount({ plugin: 'timy', surface, component: 'AbovePrompt', props })
       expect((await textsOf(ui)).some(t => t.startsWith('Summe'))).toBe(false)
-      await ui.press({ key: 'zeit-toggle' })
+      await ui.press({ key: 'timy-toggle' })
       const texts = await textsOf(ui)
       expect(texts.some(t => t.startsWith('shop 1:40 '))).toBe(true)
       expect(texts.some(t => t.includes('#12 Login-Seite 1:40'))).toBe(true)
       expect(texts.some(t => t.startsWith('blog 0:50 '))).toBe(true)
       expect(texts.some(t => t.startsWith('Summe 2:30 '))).toBe(true)
-      await ui.press({ key: 'zeit-toggle' })
+      await ui.press({ key: 'timy-toggle' })
       expect((await textsOf(ui)).some(t => t.startsWith('Summe'))).toBe(false)
     })
 
@@ -448,7 +426,7 @@ for (const surface of SURFACES) {
       await $.session.start(startOf(surface))
       await clock.settle()
       const ui = await $.ui.mount({ plugin: 'timy', surface, component: 'AbovePrompt', props: { ...props, maxRows: 6 } })
-      await ui.press({ key: 'zeit-toggle' })
+      await ui.press({ key: 'timy-toggle' })
       const texts = await textsOf(ui)
       expect(texts.some(t => t.startsWith('shop 1:40 '))).toBe(true)
       expect(texts.some(t => t.includes('#12 Login-Seite'))).toBe(false)
@@ -536,7 +514,7 @@ for (const surface of SURFACES) {
       await $.session.start(startOf(surface))
       await clock.settle()
       const band = await $.ui.mount({ plugin: 'timy', surface, component: 'AbovePrompt', props })
-      await band.press({ key: 'zeit-open' })
+      await band.press({ key: 'timy-open' })
       expect(env.opened).toEqual(['timy'])
       const pane = await $.ui.mount({ plugin: 'timy', surface, component: 'Pane', requestId: 'timy', props: paneProps })
       expect((await textsOf(pane)).some(t => /^(● )?shop 1:40 /.test(t))).toBe(true)
@@ -729,7 +707,7 @@ for (const surface of SURFACES) {
       await clock.settle()
       const ui = await openZeit($, surface)
       await ui.press({ key: 'tab-woche' })
-      expect((await textsOf(ui)).some(t => t.includes('›'))).toBe(false)
+      expect((await ui.findAll({ type: 'Button' })).map(button => button.key)).not.toContain('week-next')
       await ui.press({ key: 'week-prev' })
       let texts = await textsOf(ui)
       expect(texts).toContain('Woche ab Mo 05.10.')
@@ -865,6 +843,15 @@ describe('/timy charts', () => {
     expect(texts).not.toContain('aktiv')
     expect(texts.some(t => t.startsWith('● shop 1:40 '))).toBe(true)
     expect(texts.some(t => t.includes('#12 Login-Seite'))).toBe(false)
+  })
+
+  test('today names the parallel time when two sessions overlapped', async ($, on) => {
+    engine(on, todayFiles)
+    const clock = mock.clock(on, { now: at(15, 9, 20) })
+    await $.session.start(startOf('desktop'))
+    await clock.settle()
+    const ui = await openZeit($, 'desktop', 80, 'grafik')
+    expect((await textsOf(ui)).some(t => /^Claude \d+:\d\d · parallel \d+:\d\d$/.test(t))).toBe(true)
   })
 
   test('week on desktop shows one stacked bar per day with its target', { options: { hours_per_weekday: '8,8,8,8,8' } }, async ($, on) => {

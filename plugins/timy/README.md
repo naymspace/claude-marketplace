@@ -12,7 +12,7 @@ Above the prompt there is a band with the project, today's time and the day agai
 
 ## How it counts
 
-timy keeps a few events per session, so when you open it, type, send something and when Claude is done. Three times come out of that: `Aktiv` keeps counting for up to `idle_minutes` after each event and, while Claude works, until Claude is done (at most 2 hours). `Tippen` is the time in the prompt, `Claude` the time Claude works. The project is the path from the git remote, for example `firma/shop`. Without a remote it is the folder name of the repository, outside a git repository `ohne Projekt`. A day starts at 4 am.
+timy keeps a few events per session, so when you open it, type, send something and when Claude is done. Three times come out of that: `Aktiv` keeps counting for up to `idle_minutes` after each event and, while Claude works, until Claude is done (at most 2 hours). Closing the session stops it at once. `Tippen` is the time in the prompt, `Claude` the time Claude works. The project is the path from the git remote, for example `firma/shop`. Without a remote it is the folder name of the repository, outside a git repository `ohne Projekt`. A day starts at 4 am.
 
 ## Where the data lives
 
