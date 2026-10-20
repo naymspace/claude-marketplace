@@ -64,7 +64,7 @@ export const overlapOf = (summary: Summary, selected: number, claude: number | n
 
 const overlapRows = (overlap: Overlap | null): Row[] =>
   overlap !== null && (isShown(overlap.selected) || (overlap.claude !== null && isShown(overlap.claude)))
-    ? [{ key: 'overlap', name: 'davon gleichzeitig', values: [hm(overlap.selected), '', overlap.claude === null ? '' : hm(overlap.claude)], style: 'dim', isSum: true }]
+    ? [{ key: 'overlap', name: 'davon parallel', values: [hm(overlap.selected), '', overlap.claude === null ? '' : hm(overlap.claude)], style: 'dim', isSum: true }]
     : []
 
 export const summaryRows = (summary: Summary, folding: Folding, dots: ReadonlyMap<string, string> = new Map(), overlap: Overlap | null = null): Row[] => [

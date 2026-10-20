@@ -879,7 +879,7 @@ describe('/timy charts', () => {
     await $.session.start(startOf('desktop'))
     await clock.settle()
     const ui = await openZeit($, 'desktop', 80, 'tabelle')
-    expect((await textsOf(ui)).some(t => /^davon gleichzeitig \d+:\d\d/.test(t))).toBe(true)
+    expect((await textsOf(ui)).some(t => /^davon parallel \d+:\d\d/.test(t))).toBe(true)
   })
 
   test('without overlap there is nothing to explain under the sum', async ($, on) => {
@@ -888,7 +888,7 @@ describe('/timy charts', () => {
     await $.session.start(startOf('desktop'))
     await clock.settle()
     const ui = await openZeit($, 'desktop', 80, 'tabelle')
-    expect((await textsOf(ui)).some(t => t.startsWith('davon gleichzeitig'))).toBe(false)
+    expect((await textsOf(ui)).some(t => t.startsWith('davon parallel'))).toBe(false)
   })
 
   test('today names the parallel time when two sessions overlapped', async ($, on) => {
