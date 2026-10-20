@@ -18,7 +18,7 @@ export type Live = {
   today: Summary
 }
 
-export type BandInput = {
+type BandInput = {
   ui: Ui
   live: Live
   target: number

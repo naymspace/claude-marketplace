@@ -5,7 +5,7 @@ import type { Summary } from './model'
 
 export type Ui = ReturnType<EngineInterface['ui']['resolve']>
 
-export type BarColor = ReturnType<typeof fillColor>
+type BarColor = ReturnType<typeof fillColor>
 
 export type Row = {
   key: string
@@ -18,7 +18,7 @@ export type Row = {
   toggle?: { key: string; onPress: () => void }
 }
 
-export type Column = { title: string; width: number; minBody: number; isBar?: true }
+type Column = { title: string; width: number; minBody: number; isBar?: true }
 
 export const COLUMNS: Column[] = [
   { title: 'Aktiv', width: 8, minBody: 0 },

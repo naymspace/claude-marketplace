@@ -1,7 +1,7 @@
 import type { RenderNode } from 'claude-code'
 
 import { barsSvg, colorOf, parallelRanges, timelineSvg } from './charts'
-import type { ChartDay } from './charts'
+import type { ChartDay, ChartRow } from './charts'
 import { fillColor, hm, planPercent, shortProject, unionLength } from './model'
 import type { Span, Summary } from './model'
 import type { Tab } from './period'
@@ -115,10 +115,6 @@ const card = ({ ui, tab }: PaneInput, report: Report) => {
   const { Box, Text } = ui
   const target = sumOf(report.days.map(day => day.target))
   const active = sumOf(report.days.map(day => day.active))
-  const extras =
-    tab === 'heute'
-      ? `Claude ${hm(unionLength(report.spans, 'claude', report.from, report.to))} · parallel ${hm(sumOf(parallelRanges(report.spans, report.from, report.to).map(([a, b]) => b - a)))}`
-      : ''
   return (
     <Box flexDirection="column" borderStyle="round" paddingX={1} marginY={1}>
       <Box flexDirection="row" columnGap={1}>
@@ -128,19 +124,23 @@ const card = ({ ui, tab }: PaneInput, report: Report) => {
         {target > 0 ? <Text dimColor>{`${planPercent(active, target)} %`}</Text> : null}
       </Box>
       {target > 0 ? fullBar(ui, active, target) : null}
-      {extras === '' ? null : <Text dimColor>{extras}</Text>}
+      {tab === 'heute' ? (
+        <Text dimColor>
+          {`Claude ${hm(unionLength(report.spans, 'claude', report.from, report.to))} · parallel ${hm(sumOf(parallelRanges(report.spans, report.from, report.to).map(([a, b]) => b - a)))}`}
+        </Text>
+      ) : null}
     </Box>
   )
 }
 
-type ChartRow = { project: string; name: string; selected: number }
+type SelectedRow = ChartRow & { selected: number }
 
-const chartRowsOf = (report: Report): ChartRow[] =>
+const chartRowsOf = (report: Report): SelectedRow[] =>
   report.summary.rows
     .filter(row => isShown(row.selected) || isShown(row.claude))
     .map(row => ({ project: row.project, name: shortProject(row.project), selected: row.selected }))
 
-const chart = ({ ui, tab, width }: PaneInput, Svg: SvgElement, report: Report, rows: ChartRow[]) => {
+const chart = ({ ui, tab, width }: PaneInput, Svg: SvgElement, report: Report, rows: SelectedRow[]) => {
   const { Box, Text } = ui
   const px = width * PX_PER_COLUMN
   const alt = rows.map(row => `${row.name} ${hm(row.selected)}`).join(', ')
