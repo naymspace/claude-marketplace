@@ -173,6 +173,7 @@ const chart = ({ ui, tab, width }: PaneInput, Svg: SvgElement, report: Report, r
           isInteractive
         />
       )}
+      {rows.length === 0 ? null : <Text dimColor>Dicker Balken aktiv, dünner Balken Claude, Strich jetzt</Text>}
     </Box>
   )
 }
@@ -186,21 +187,26 @@ const folding = (p: PaneInput, isGrafik: boolean): Folding => {
 const perDay = ({ ui }: PaneInput, layout: Layout, report: Report) => {
   const { Box, Text } = ui
   const hasTarget = report.days.some(day => day.target > 0)
+  const targets = new Set(report.days.filter(day => day.active > 0).map(day => day.target))
+  const sameTarget = targets.size === 1 && hasTarget ? [...targets][0]! : null
   const rows = report.days
     .filter(day => day.active > 0)
     .map(
       (day): Row => ({
         key: `day-${day.labels[0]}`,
         name: day.labels[0]!,
-        values: [hm(day.active), hm(day.target)],
+        values: sameTarget === null ? [hm(day.active), hm(day.target)] : [hm(day.active)],
         style: 'plain',
         ...(day.target > 0 ? { bar: { actual: day.active, planned: day.target, color: fillColor(day.active, day.target) } } : {}),
       }),
     )
   return (
     <Box flexDirection="column" marginTop={layout.isSplit ? 0 : 1}>
-      <Text bold>Pro Tag</Text>
-      {table(ui, dayColumns(layout.columnWidth, hasTarget), rows, layout.columnWidth)}
+      <Box flexDirection="row" columnGap={2}>
+        <Text bold>Pro Tag</Text>
+        {sameTarget === null ? null : <Text dimColor>{`Soll ${hm(sameTarget)}`}</Text>}
+      </Box>
+      {table(ui, dayColumns(layout.columnWidth, hasTarget, sameTarget === null && hasTarget), rows, layout.columnWidth, 1)}
     </Box>
   )
 }

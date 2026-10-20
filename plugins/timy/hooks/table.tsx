@@ -28,14 +28,10 @@ export const COLUMNS: Column[] = [
 
 const BAR_GAP = 2
 
-export const dayColumns = (width: number, hasTarget: boolean): Column[] => [
+export const dayColumns = (width: number, hasTarget: boolean, isTargetShown: boolean): Column[] => [
   COLUMNS[0]!,
-  ...(hasTarget
-    ? [
-        { title: 'Soll', width: 7, minBody: 36 },
-        { title: '', width: BAR_GAP + (width >= 80 ? 12 : 8), minBody: 52, isBar: true as const },
-      ]
-    : []),
+  ...(isTargetShown ? [{ title: 'Soll', width: 7, minBody: 36 }] : []),
+  ...(hasTarget ? [{ title: '', width: BAR_GAP + (width >= 80 ? 12 : 8), minBody: 52, isBar: true as const }] : []),
 ]
 
 export const isShown = (ms: number) => hm(ms) !== '0:00'
@@ -43,6 +39,18 @@ export const isShown = (ms: number) => hm(ms) !== '0:00'
 export type Folding = { isOpen: (project: string) => boolean; toggle?: (project: string) => void }
 
 export const allOpen = (isOpen: boolean): Folding => ({ isOpen: () => isOpen })
+
+type SessionTimes = Summary['rows'][number]['sessions'][number]
+
+const byLabel = (sessions: readonly SessionTimes[]): SessionTimes[] => {
+  const merged = new Map<string, SessionTimes>()
+  for (const s of sessions) {
+    const known = merged.get(s.label)
+    if (known) merged.set(s.label, { ...known, selected: known.selected + s.selected, writing: known.writing + s.writing, claude: known.claude + s.claude })
+    else merged.set(s.label, s)
+  }
+  return [...merged.values()]
+}
 
 export const summaryRows = (summary: Summary, folding: Folding, dots: ReadonlyMap<string, string> = new Map()): Row[] => [
   ...summary.rows
@@ -61,7 +69,7 @@ export const summaryRows = (summary: Summary, folding: Folding, dots: ReadonlyMa
           ...(toggle ? { toggle: { key: `toggle-${row.project}`, onPress: () => toggle(row.project) } } : {}),
         },
         ...(isOpen
-          ? row.sessions
+          ? byLabel(row.sessions)
               .filter(s => s.label && (isShown(s.selected) || isShown(s.writing) || isShown(s.claude)))
               .map((s): Row => ({
                 key: `session-${s.session}`,
@@ -98,7 +106,7 @@ export const fullBar = ({ Box }: Ui, actual: number, planned: number) => {
   )
 }
 
-export const table = (ui: Ui, columns: Column[], rows: Row[], width: number) => {
+export const table = (ui: Ui, columns: Column[], rows: Row[], width: number, rowGap = 0) => {
   const { Box, Text, Button } = ui
   const shown = columns.flatMap((column, i) => (width >= column.minBody ? [{ column, i }] : []))
   const line = (row: Row) => (
@@ -130,7 +138,9 @@ export const table = (ui: Ui, columns: Column[], rows: Row[], width: number) => 
   return (
     <Box flexDirection="column">
       {line({ key: 'head', name: '', values: columns.map(c => c.title), style: 'dim' })}
-      {rows.filter(row => !row.isSum).map(line)}
+      <Box flexDirection="column" rowGap={rowGap}>
+        {rows.filter(row => !row.isSum).map(line)}
+      </Box>
       {sums.length > 0 ? (
         <Box flexDirection="column" marginTop={1}>
           {sums.map(line)}

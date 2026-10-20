@@ -38,5 +38,5 @@ export const periodTitle = (tab: Tab, offset: number, from: number): string => {
   if (tab === 'heute') return offset === 0 ? `Heute, ${dayLabel(from)}` : dayLabel(from)
   if (tab === 'woche') return offset === 0 ? 'Diese Woche' : `Woche ab ${dayLabel(from)}`
   const d = new Date(from)
-  return offset === 0 ? 'Dieser Monat' : `${MONTHS[d.getMonth()]} ${d.getFullYear()}`
+  return `${MONTHS[d.getMonth()]} ${d.getFullYear()}`
 }

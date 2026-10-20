@@ -664,7 +664,20 @@ for (const surface of SURFACES) {
       await ui.press({ key: 'tab-woche' })
       const texts = await textsOf(ui)
       expect(texts.some(t => t.startsWith('▸ shop 2:10 '))).toBe(true)
-      expect(texts).toContain('Mo 12.10. 0:30 8:00')
+      expect(texts).toContain('Soll 8:00')
+      expect(texts).toContain('Mo 12.10. 0:30')
+      expect(texts).toContain('Do 15.10. 2:30')
+    })
+
+    test('per day shows the target per row when it differs', { options: { hours_per_weekday: '6,8,8,8,8' } }, async ($, on) => {
+      engine(on, reportFiles)
+      const clock = mock.clock(on, { now: at(15, 18, 0) })
+      await $.session.start(startOf(surface))
+      await clock.settle()
+      const ui = await openZeit($, surface)
+      await ui.press({ key: 'tab-woche' })
+      const texts = await textsOf(ui)
+      expect(texts).toContain('Mo 12.10. 0:30 6:00')
       expect(texts).toContain('Do 15.10. 2:30 8:00')
     })
 
@@ -995,11 +1008,11 @@ describe('/timy layout and failure', () => {
     await clock.settle()
     const ui = await openZeit($, 'desktop', 80, 'tabelle')
     await ui.press({ key: 'tab-monat' })
-    expect(await textsOf(ui)).toContain('Dieser Monat')
+    expect(await textsOf(ui)).toContain('Oktober 2026')
     await ui.press({ key: 'month-prev' })
     expect(await textsOf(ui)).toContain('September 2026')
     await ui.press({ key: 'month-next' })
-    expect(await textsOf(ui)).toContain('Dieser Monat')
+    expect(await textsOf(ui)).toContain('Oktober 2026')
   })
 
   test('a pane that fails to draw says so instead of going blank', async ($, on) => {
