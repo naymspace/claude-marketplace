@@ -1,7 +1,8 @@
 import { HOUR, clip, hm, merge, pad, shortProject } from './model'
 import type { Range, Span } from './model'
 
-export const PALETTE = ['#1D9E75', '#7F77DD', '#D85A30', '#378ADD', '#D4537E', '#639922', '#BA7517']
+export const PALETTE = ['#1D9E75', '#7F77DD', '#D85A30', '#378ADD', '#D4537E', '#BA7517']
+const NOW = '#ECEAE6'
 const MUTED = '#888780'
 const FONT = 'font-family="system-ui, sans-serif" font-size="13"'
 const CHAR_PX = 8
@@ -141,7 +142,7 @@ export const timelineSvg = ({
   }
   if (isToday) {
     parts.push(
-      `<line x1="${x(now)}" y1="14" x2="${x(now)}" y2="${height - 2}" stroke="#D85A30" stroke-width="1.5">` +
+      `<line x1="${x(now)}" y1="14" x2="${x(now)}" y2="${height - 2}" stroke="${NOW}" stroke-width="2">` +
         `<animate attributeName="stroke-opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/>` +
         `<title>jetzt ${clock(now)}</title></line>`,
     )
@@ -191,10 +192,12 @@ export const barsSvg = ({ days, rows, width }: { days: readonly ChartDay[]; rows
       )
     }
     if (totals[i]! > 0 && slot >= 30) {
-      parts.push(`<text x="${cx}" y="${y(Math.max(totals[i]!, day.target)) - 7}" text-anchor="middle" fill="${MUTED}" ${FONT}>${hm(totals[i]!)}</text>`)
+      const above = y(totals[i]!) - 7
+      const isOnTarget = day.target > totals[i]! && above - y(day.target) < 16
+      parts.push(`<text x="${cx}" y="${isOnTarget ? y(day.target) - 7 : above}" text-anchor="middle" fill="${MUTED}" ${FONT}>${hm(totals[i]!)}</text>`)
     }
     const label = day.labels.find(text => slot >= text.length * CHAR_PX + 8) ?? day.labels.at(-1)!
-    if (slot >= 14 || i % 2 === 0) {
+    if (i % Math.ceil((label.length * CHAR_PX + 8) / slot) === 0) {
       parts.push(`<text x="${cx}" y="${height - 6}" text-anchor="middle" fill="${MUTED}" ${FONT}>${escapeXml(label)}</text>`)
     }
   })
