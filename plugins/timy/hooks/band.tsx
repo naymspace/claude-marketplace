@@ -2,7 +2,7 @@ import type { RenderNode } from 'claude-code'
 
 import { fillColor, hm, hms, planFilled } from './model'
 import type { Summary, TimyEvent } from './model'
-import { COLUMNS, allOpen, bar, summaryRows, table } from './table'
+import { COLUMNS, allOpen, bar, overlapOf, summaryRows, table } from './table'
 import type { Ui } from './table'
 
 export type Live = {
@@ -79,8 +79,9 @@ export const renderBand = ({ ui, live, width, maxRows, isUnfolded, theirs, onTog
   )
   if (!isUnfolded) return band
   const room = maxRows - 3
-  const full = summaryRows(live.today, allOpen(true))
-  const rows = full.length <= room ? full : summaryRows(live.today, allOpen(false))
+  const overlap = overlapOf(live.today, live.dayAtRefresh)
+  const full = summaryRows(live.today, allOpen(true), new Map(), overlap)
+  const rows = full.length <= room ? full : summaryRows(live.today, allOpen(false), new Map(), overlap)
   return (
     <Box flexDirection="column">
       {band}

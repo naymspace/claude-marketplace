@@ -5,7 +5,7 @@ import type { ChartDay, ChartRow, Colors } from './charts'
 import { fillColor, hm, planPercent, shortProject, unionLength } from './model'
 import type { Span, Summary } from './model'
 import type { Tab } from './period'
-import { COLUMNS, allOpen, dayColumns, fullBar, isShown, summaryRows, table } from './table'
+import { COLUMNS, allOpen, dayColumns, fullBar, isShown, overlapOf, summaryRows, table } from './table'
 import type { Folding, Row, Ui } from './table'
 
 export type View = 'grafik' | 'tabelle'
@@ -229,7 +229,10 @@ export const renderPane = (p: PaneInput) => {
   const layout = layoutOf(p.width)
   const rows = chartRowsOf(report)
   const dots = Svg === null ? new Map<string, string>() : new Map(rows.map(row => [row.project, row.color]))
-  const summary = table(p.ui, COLUMNS, summaryRows(report.summary, folding(p, Svg !== null), dots), layout.columnWidth)
+  const active = sumOf(report.days.map(day => day.active))
+  const claude = p.tab === 'heute' ? unionLength(report.spans, 'claude', report.from, report.to) : null
+  const overlap = overlapOf(report.summary, active, claude)
+  const summary = table(p.ui, COLUMNS, summaryRows(report.summary, folding(p, Svg !== null), dots, overlap), layout.columnWidth)
   const hasPerDay = Svg === null && p.tab !== 'heute' && report.days.some(day => day.active > 0)
   return (
     <Box flexDirection="column">

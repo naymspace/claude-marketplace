@@ -55,7 +55,19 @@ const byLabel = (sessions: readonly SessionTimes[]): SessionTimes[] => {
   return [...merged.values()]
 }
 
-export const summaryRows = (summary: Summary, folding: Folding, dots: ReadonlyMap<string, string> = new Map()): Row[] => [
+export type Overlap = { selected: number; claude: number | null }
+
+export const overlapOf = (summary: Summary, selected: number, claude: number | null = null): Overlap => {
+  const total = (kind: 'selected' | 'claude') => summary.rows.reduce((sum, row) => sum + row[kind], 0)
+  return { selected: total('selected') - selected, claude: claude === null ? null : total('claude') - claude }
+}
+
+const overlapRows = (overlap: Overlap | null): Row[] =>
+  overlap !== null && (isShown(overlap.selected) || (overlap.claude !== null && isShown(overlap.claude)))
+    ? [{ key: 'overlap', name: 'davon gleichzeitig', values: [hm(overlap.selected), '', overlap.claude === null ? '' : hm(overlap.claude)], style: 'dim', isSum: true }]
+    : []
+
+export const summaryRows = (summary: Summary, folding: Folding, dots: ReadonlyMap<string, string> = new Map(), overlap: Overlap | null = null): Row[] => [
   ...summary.rows
     .filter(row => isShown(row.selected) || isShown(row.writing) || isShown(row.claude))
     .flatMap((row): Row[] => {
@@ -90,6 +102,7 @@ export const summaryRows = (summary: Summary, folding: Folding, dots: ReadonlyMa
     style: 'bold',
     isSum: true,
   },
+  ...overlapRows(overlap),
 ]
 
 export const bar = ({ Box }: Ui, filled: number, width: number, color: BarColor) => (

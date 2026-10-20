@@ -873,6 +873,24 @@ describe('/timy charts', () => {
     expect(saved['beispiel/shop']).toBe(0)
   })
 
+  test('the sum explains time counted twice when sessions overlapped', async ($, on) => {
+    engine(on, todayFiles)
+    const clock = mock.clock(on, { now: at(15, 9, 20) })
+    await $.session.start(startOf('desktop'))
+    await clock.settle()
+    const ui = await openZeit($, 'desktop', 80, 'tabelle')
+    expect((await textsOf(ui)).some(t => /^davon gleichzeitig \d+:\d\d/.test(t))).toBe(true)
+  })
+
+  test('without overlap there is nothing to explain under the sum', async ($, on) => {
+    engine(on, reportFiles)
+    const clock = mock.clock(on, { now: at(15, 18, 0) })
+    await $.session.start(startOf('desktop'))
+    await clock.settle()
+    const ui = await openZeit($, 'desktop', 80, 'tabelle')
+    expect((await textsOf(ui)).some(t => t.startsWith('davon gleichzeitig'))).toBe(false)
+  })
+
   test('today names the parallel time when two sessions overlapped', async ($, on) => {
     engine(on, todayFiles)
     const clock = mock.clock(on, { now: at(15, 9, 20) })
