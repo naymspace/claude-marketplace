@@ -121,7 +121,7 @@ export const timelineSvg = ({
     const own = spans.filter(s => s.project === row.project)
     for (const [kind, top, h, opacity, what] of [
       ['selected', y + 5, 12, 1, 'aktiv'],
-      ['claude', y + 19, 6, 0.5, 'Claude'],
+      ['claude', y + 19, 6, 0.65, 'Claude'],
     ] as const) {
       for (const range of merge(clip(own.filter(s => s.kind === kind), start, end))) {
         parts.push(
@@ -136,7 +136,7 @@ export const timelineSvg = ({
     parts.push(`<text x="${labelWidth}" y="${y + 15}" text-anchor="end" fill="${MUTED}" ${FONT}>parallel</text>`)
     for (const range of parallel) {
       parts.push(
-        `<rect x="${x(range[0])}" y="${y + 7}" width="${w(range)}" height="10" rx="2" fill="${MUTED}" fill-opacity="0.6">` +
+        `<rect x="${x(range[0])}" y="${y + 7}" width="${w(range)}" height="10" rx="2" fill="${MUTED}" fill-opacity="0.9">` +
           `<title>parallel ${clock(range[0])}–${clock(range[1])} (${hm(range[1] - range[0])})</title></rect>`,
       )
     }
@@ -195,7 +195,8 @@ export const barsSvg = ({ days, rows, width }: { days: readonly ChartDay[]; rows
     if (totals[i]! > 0 && slot >= 30) {
       parts.push(`<text x="${cx}" y="${y(Math.max(totals[i]!, day.target)) - 7}" text-anchor="middle" fill="${MUTED}" ${FONT}>${hm(totals[i]!)}</text>`)
     }
-    const label = slot >= day.label.length * CHAR_PX + 8 ? day.label : day.short
+    const weekday = day.label.slice(0, 6)
+    const label = [day.label, weekday].find(text => slot >= text.length * CHAR_PX + 8) ?? day.short
     if (slot >= 14 || i % 2 === 0) {
       parts.push(`<text x="${cx}" y="${height - 6}" text-anchor="middle" fill="${MUTED}" ${FONT}>${escapeXml(label)}</text>`)
     }

@@ -70,7 +70,7 @@ describe('timelineSvg', () => {
   test('draws each project in its own colour with a tooltip', () => {
     const colors = colorsFor(['beispiel/shop', 'beispiel/blog'])
     expect(svg).toContain(`fill="${colors.get('beispiel/shop')}" fill-opacity="1"><title>shop · aktiv 09:15–10:00 (0:45)</title>`)
-    expect(svg).toContain(`fill="${colors.get('beispiel/shop')}" fill-opacity="0.5"><title>shop · Claude 09:20–09:40 (0:20)</title>`)
+    expect(svg).toContain(`fill="${colors.get('beispiel/shop')}" fill-opacity="0.65"><title>shop · Claude 09:20–09:40 (0:20)</title>`)
     expect(svg).toContain(`fill="${colors.get('beispiel/blog')}" fill-opacity="1"><title>blog · aktiv 10:00–11:30 (1:30)</title>`)
   })
 
@@ -168,12 +168,13 @@ describe('barsSvg', () => {
     expect(barsSvg({ days, rows, width: 600 })).toContain('>5:00</text>')
   })
 
-  test('a week slot too narrow for the whole label shows only the day of month', () => {
+  test('a narrower week slot drops the month, then the weekday', () => {
     const week = ['Mo 19.10.', 'Di 20.10.', 'Mi 21.10.', 'Do 22.10.', 'Fr 23.10.'].map(label => ({ label, short: label.slice(3, 5), target: 0, byProject: [] }))
-    const narrow = barsSvg({ days: week, rows, width: 36 + 5 * 50 })
-    expect(narrow).toContain('>19</text>')
-    expect(narrow).not.toContain('Mo 19.10.</text>')
     expect(barsSvg({ days: week, rows, width: 36 + 5 * 90 })).toContain('>Mo 19.10.</text>')
+    expect(barsSvg({ days: week, rows, width: 36 + 5 * 60 })).toContain('>Mo 19.</text>')
+    const narrow = barsSvg({ days: week, rows, width: 36 + 5 * 40 })
+    expect(narrow).toContain('>19</text>')
+    expect(narrow).not.toContain('Mo 19.</text>')
   })
 })
 
