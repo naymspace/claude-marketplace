@@ -150,7 +150,7 @@ export const timelineSvg = ({
   return chart(width, height, parts)
 }
 
-export type ChartDay = { labels: readonly string[]; target: number; byProject: readonly (readonly [string, number])[] }
+export type ChartDay = { labels: readonly string[]; isMonday: boolean; target: number; byProject: readonly (readonly [string, number])[] }
 
 export const barsSvg = ({ days, rows, width }: { days: readonly ChartDay[]; rows: readonly ChartRow[]; width: number }): Chart => {
   const height = 200
@@ -197,7 +197,8 @@ export const barsSvg = ({ days, rows, width }: { days: readonly ChartDay[]; rows
       parts.push(`<text x="${cx}" y="${isOnTarget ? y(day.target) - 7 : above}" text-anchor="middle" fill="${MUTED}" ${FONT}>${hm(totals[i]!)}</text>`)
     }
     const label = day.labels.find(text => slot >= text.length * CHAR_PX + 8) ?? day.labels.at(-1)!
-    if (i % Math.ceil((label.length * CHAR_PX + 8) / slot) === 0) {
+    const isRoomy = slot >= label.length * CHAR_PX + 8
+    if (isRoomy || day.isMonday) {
       parts.push(`<text x="${cx}" y="${height - 6}" text-anchor="middle" fill="${MUTED}" ${FONT}>${escapeXml(label)}</text>`)
     }
   })

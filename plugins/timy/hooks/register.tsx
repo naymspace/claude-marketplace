@@ -139,6 +139,7 @@ const buildReport = async ($: EngineInterface, c: Ctx, tab: Tab, offset: number)
   for (let day = from; day < to; day = addDays(day, 1)) {
     days.push({
       labels: dayLabels(day),
+      isMonday: new Date(day).getDay() === 1,
       target: dayTarget(c.hoursPerWeekday, day),
       byProject: summarize(spans, labels, day, addDays(day, 1)).rows.map(row => [row.project, row.selected] as const),
       active: unionLength(spans, 'selected', day, addDays(day, 1)),
