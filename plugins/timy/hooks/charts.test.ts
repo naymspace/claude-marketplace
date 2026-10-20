@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { PALETTE, barsSvg as barsChart, escapeXml, parallelRanges, timelineSvg as timelineChart } from './charts'
+import { PALETTE, barsSvg as barsChart, colorsFor, escapeXml, parallelRanges, timelineSvg as timelineChart } from './charts'
 import type { Span } from './model'
 
 const at = (h: number, m: number) => new Date(2026, 9, 16, h, m).getTime()
@@ -68,9 +68,10 @@ describe('timelineSvg', () => {
   })
 
   test('draws each project in its own colour with a tooltip', () => {
-    expect(svg).toContain(`fill="${PALETTE[0]}" fill-opacity="1"><title>shop · aktiv 09:15–10:00 (0:45)</title>`)
-    expect(svg).toContain(`fill="${PALETTE[0]}" fill-opacity="0.5"><title>shop · Claude 09:20–09:40 (0:20)</title>`)
-    expect(svg).toContain(`fill="${PALETTE[1]}" fill-opacity="1"><title>blog · aktiv 10:00–11:30 (1:30)</title>`)
+    const colors = colorsFor(['beispiel/shop', 'beispiel/blog'])
+    expect(svg).toContain(`fill="${colors.get('beispiel/shop')}" fill-opacity="1"><title>shop · aktiv 09:15–10:00 (0:45)</title>`)
+    expect(svg).toContain(`fill="${colors.get('beispiel/shop')}" fill-opacity="0.5"><title>shop · Claude 09:20–09:40 (0:20)</title>`)
+    expect(svg).toContain(`fill="${colors.get('beispiel/blog')}" fill-opacity="1"><title>blog · aktiv 10:00–11:30 (1:30)</title>`)
   })
 
   test('marks now with a pulsing line', () => {
@@ -154,8 +155,9 @@ describe('barsSvg', () => {
 
   test('stacks projects per day in the timeline colours', () => {
     const svg = barsSvg({ days, rows, width: 600 })
-    expect(svg).toContain(`fill="${PALETTE[0]}"><title>Mo 12.10. · shop 2:00</title>`)
-    expect(svg).toContain(`fill="${PALETTE[1]}"><title>Mo 12.10. · blog 3:00</title>`)
+    const colors = colorsFor(rows.map(row => row.project))
+    expect(svg).toContain(`fill="${colors.get(rows[0]!.project)}"><title>Mo 12.10. · shop 2:00</title>`)
+    expect(svg).toContain(`fill="${colors.get(rows[1]!.project)}"><title>Mo 12.10. · blog 3:00</title>`)
   })
 
   test('shows the day target as a dashed line', () => {
@@ -172,6 +174,19 @@ describe('barsSvg', () => {
     expect(narrow).toContain('>19</text>')
     expect(narrow).not.toContain('Mo 19.10.</text>')
     expect(barsSvg({ days: week, rows, width: 36 + 5 * 90 })).toContain('>Mo 19.10.</text>')
+  })
+})
+
+describe('colorsFor', () => {
+  test('a project keeps its colour in any order', () => {
+    const today = colorsFor(['firma/shop', 'firma/blog', 'firma/app'])
+    const week = colorsFor(['firma/app', 'firma/shop', 'firma/blog'])
+    for (const project of ['firma/shop', 'firma/blog', 'firma/app']) expect(week.get(project)).toBe(today.get(project))
+  })
+
+  test('projects shown together get different colours', () => {
+    const projects = Array.from({ length: PALETTE.length }, (_, i) => `firma/projekt-${i}`)
+    expect(new Set(colorsFor(projects).values()).size).toBe(PALETTE.length)
   })
 })
 
