@@ -3,7 +3,7 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import { renderBand, renderBandNote } from './band'
 import type { Live } from './band'
-import { HOUR, allSpans, unionLength, dayTarget, pad, projectName, sessionLabels, sessionState, shortProject, summarize } from './model'
+import { allSpans, unionLength, dayTarget, pad, projectName, sessionLabels, sessionState, shortProject, summarize } from './model'
 import type { EventType } from './model'
 import { renderPane } from './pane'
 import type { Report, View } from './pane'
@@ -11,14 +11,11 @@ import { dayLabel, periodTitle, rangeOf } from './period'
 import type { Tab } from './period'
 import { SessionLog, addDays, dayKey, dayStart, daysBetween, loadDays } from './store'
 import type { Fs } from './store'
-import { isShown } from './table'
 
 const EDIT_THROTTLE_MS = 10_000
 const PANE = 'timy'
 const BAND_DRAWN = { plugin: 'timy', key: 'band' } as const
 const PANE_DRAWN = { plugin: 'timy', key: 'pane' } as const
-const VIEW = { plugin: 'timy', key: 'view' } as const
-const ADDON_TARGETS = { plugin: 'timy-moco', key: 'targets' } as const
 
 // a redraw asked for after the module was unloaded has nothing left to draw
 const redrawBand = ($: EngineInterface) => void update($, BAND_DRAWN, n => (n ?? 0) + 1).catch(() => undefined)
@@ -155,18 +152,9 @@ const buildReport = async ($: EngineInterface, c: Ctx, tab: Tab, offset: number)
     now,
     summary: summarize(spans, labels, from, to),
     spans: tab === 'heute' ? spans : [],
-    days,
+    days: days.filter(day => day.target > 0 || day.active > 0),
   }
 }
-
-const publishView = ($: EngineInterface, tab: Tab, built: Report) =>
-  $.state
-    .set(VIEW, {
-      tab,
-      days: built.days.map(day => day.key),
-      actual: built.summary.rows.filter(row => isShown(row.selected)).map((row): [string, number] => [row.project, row.selected]),
-    })
-    .catch(() => undefined)
 
 const isShowing = (tab: Tab, offset: number) => pane.tab === tab && pane.offset === offset
 
@@ -176,7 +164,6 @@ const showReport = async ($: EngineInterface, tab: Tab, offset: number, built: R
   pane.report = built
   pane.isLoading = false
   redrawPane($)
-  await publishView($, tab, built)
 }
 
 type Shown = { tab: Tab; offset: number; report: Report | null }
@@ -224,16 +211,6 @@ const switchTo = async ($: EngineInterface, tab: Tab, offset: number) => {
   pane.offset = offset
   await loadReport($, previous)
 }
-
-const targetOf = (targets: Record<string, number> | undefined, key: string, configured: number) => {
-  const hours = targets?.[key]
-  return hours === undefined ? configured : hours * HOUR
-}
-
-const withTargets = (report: Report, targets: Record<string, number> | undefined): Report => ({
-  ...report,
-  days: report.days.map(day => ({ ...day, target: targetOf(targets, day.key, day.target) })).filter(day => day.target > 0 || day.active > 0),
-})
 
 const openPane = async ($: EngineInterface) => {
   pane.tab = 'heute'
@@ -401,11 +378,9 @@ export const register: Register = (on, options) => {
       if (band.spinner === null && !band.isUnreadable) return theirs
       return renderBandNote(ui, band.isUnreadable ? 'timy: Zeiten nicht lesbar' : `${SPINNER[band.spinnerFrame % SPINNER.length]} timy lädt …`, theirs)
     }
-    const { value: targets } = await $.state.get(ADDON_TARGETS)
     return renderBand({
       ui,
       live,
-      target: targetOf(targets, live.day, live.target),
       width: e.props.bodyColumns,
       maxRows: e.props.maxRows,
       isUnfolded: band.isUnfolded,
@@ -426,8 +401,7 @@ export const register: Register = (on, options) => {
   on('ui.render', { component: 'Pane' }, async ($, e, next) => {
     if (e.requestId !== PANE) return next(e)
     await $.state.get(PANE_DRAWN)
-    const addons = await next(e)
-    const { value: targets } = await $.state.get(ADDON_TARGETS)
+    const theirs = await next(e)
     const ui = $.ui.resolve(e)
     return renderPane({
       ui,
@@ -437,9 +411,9 @@ export const register: Register = (on, options) => {
       view: pane.view,
       offset: pane.offset,
       isLoading: pane.isLoading,
-      report: pane.report === null ? null : withTargets(pane.report, targets),
+      report: pane.report,
       unfolded: pane.unfolded,
-      addons,
+      theirs,
       onTab: tab => switchTo($, tab, 0),
       onView: view => {
         pane.view = view

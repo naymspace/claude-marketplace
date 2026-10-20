@@ -21,7 +21,6 @@ export type Live = {
 type BandInput = {
   ui: Ui
   live: Live
-  target: number
   width: number
   maxRows: number
   isUnfolded: boolean
@@ -41,7 +40,7 @@ export const renderBandNote = ({ Box, Text }: Ui, note: string, theirs: RenderNo
   </Box>
 )
 
-export const renderBand = ({ ui, live, target, width, maxRows, isUnfolded, theirs, onToggle, onOpen }: BandInput) => {
+export const renderBand = ({ ui, live, width, maxRows, isUnfolded, theirs, onToggle, onOpen }: BandInput) => {
   const { Box, Text, Button } = ui
   const isShort = width < BAND_SHORT_BELOW
   const projectToday = hm(live.projectOthers + live.sessionToday)
@@ -67,10 +66,10 @@ export const renderBand = ({ ui, live, target, width, maxRows, isUnfolded, their
         {isShort ? null : (
           <Box flexDirection="row" columnGap={1} flexShrink={0}>
             <Text dimColor wrap="truncate">
-              {`Tag ${hm(dayTotal)}${target > 0 ? `/${hm(target)}` : ''}`}
+              {`Tag ${hm(dayTotal)}${live.target > 0 ? `/${hm(live.target)}` : ''}`}
             </Text>
-            {target > 0 && width >= BAND_BAR_FROM
-              ? bar(ui, planFilled(dayTotal, target, BAND_BAR_WIDTH), BAND_BAR_WIDTH, fillColor(dayTotal, target))
+            {live.target > 0 && width >= BAND_BAR_FROM
+              ? bar(ui, planFilled(dayTotal, live.target, BAND_BAR_WIDTH), BAND_BAR_WIDTH, fillColor(dayTotal, live.target))
               : null}
           </Box>
         )}

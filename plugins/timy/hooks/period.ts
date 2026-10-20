@@ -1,8 +1,7 @@
 import { pad } from './model'
 import { addDays, dayStart, monthStart, weekStart } from './store'
-import type { TimyView } from '../types'
 
-export type Tab = TimyView['tab']
+export type Tab = 'heute' | 'woche' | 'monat'
 
 const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
 const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']

@@ -24,7 +24,7 @@
     "hours_per_weekday": {
       "type": "string",
       "title": "Soll pro Wochentag (Stunden)",
-      "description": "Optional. Montag bis Sonntag mit Komma getrennt, z. B. 8,8,8,8,8 oder 8,8,8,8,0. Leer lassen, dann zeigt timy kein Soll, außer ein Add-on wie timy-moco liefert eins.",
+      "description": "Optional. Montag bis Sonntag mit Komma getrennt, z. B. 8,8,8,8,8 oder 8,8,8,8,0. Leer lassen, dann zeigt timy kein Soll.",
       "default": ""
     }
   }

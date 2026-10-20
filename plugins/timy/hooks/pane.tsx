@@ -32,7 +32,7 @@ export type PaneInput = {
   isLoading: boolean
   report: Report | null
   unfolded: ReadonlySet<string>
-  addons: RenderNode
+  theirs: RenderNode
   onTab: (tab: Tab) => Promise<void>
   onView: (view: View) => void
   onPage: (step: number) => Promise<void>
@@ -207,7 +207,7 @@ export const renderPane = (p: PaneInput) => {
         <Box marginTop={1}>
           <Text dimColor>lädt …</Text>
         </Box>
-        {p.addons}
+        {p.theirs}
       </Box>
     )
   }
@@ -227,7 +227,7 @@ export const renderPane = (p: PaneInput) => {
         </Box>
         {pair(p.ui, layout, summary, hasPerDay ? perDay(p, layout, report) : null)}
       </Box>
-      {p.addons}
+      {p.theirs}
     </Box>
   )
 }

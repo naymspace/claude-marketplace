@@ -38,8 +38,4 @@ timy works without any setup.
 |---|---|---|
 | `idle_minutes` | `5` | Minutes without input after which `Aktiv` stops counting |
 | `data_dir` | `~/.claude/timy` | Folder for the data |
-| `hours_per_weekday` | no target | Your target Monday to Sunday, for example `8,8,8,8,8`. An add-on like `timy-moco` can replace it |
-
-## Add-ons
-
-timy itself talks to no other service. If you use MOCO or mite, you can install `timy-moco` or `timy-mite` on top, they add their part at the bottom of the pane.
+| `hours_per_weekday` | no target | Your target Monday to Sunday, for example `8,8,8,8,8` |
