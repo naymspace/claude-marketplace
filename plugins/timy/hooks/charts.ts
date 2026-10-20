@@ -69,6 +69,7 @@ const floorHour = (t: number) => {
 }
 
 const LABEL_GAP = 8
+const LABEL_CHAR_PX = 8
 const ROW = 30
 
 export const timelineSvg = ({
@@ -94,8 +95,9 @@ export const timelineSvg = ({
   const end = Math.max(floorHour(last) + HOUR, start + HOUR)
   const parallel = parallelRanges(spans, from, to)
   const longest = Math.max(0, ...rows.map(row => row.name.length), parallel.length > 0 ? 'parallel'.length : 0)
-  const labelWidth = Math.round(Math.min(140, width * 0.4, longest * CHAR_PX))
-  const fit = (text: string) => (text.length * CHAR_PX <= labelWidth ? text : `${text.slice(0, Math.max(1, Math.floor(labelWidth / CHAR_PX) - 1))}…`)
+  const labelWidth = Math.round(Math.min(140, width * 0.4, longest * LABEL_CHAR_PX + LABEL_GAP))
+  const fit = (text: string) =>
+    text.length * LABEL_CHAR_PX + LABEL_GAP <= labelWidth ? text : `${text.slice(0, Math.max(1, Math.floor((labelWidth - LABEL_GAP) / LABEL_CHAR_PX) - 1))}…`
   const plot = width - labelWidth - LABEL_GAP - 12
   const x = (t: number) => labelWidth + LABEL_GAP + ((t - start) / (end - start)) * plot
   const w = ([a, b]: Range) => Math.max(1, x(b) - x(a))

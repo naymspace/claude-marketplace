@@ -112,7 +112,7 @@ describe('timelineSvg', () => {
       now: at(11, 0),
       width: 320,
     })
-    expect(labelX(narrow, 'ohne Projekt')).toBeGreaterThanOrEqual('ohne Projekt'.length * 7)
+    expect(labelX(narrow, 'ohne Projekt')).toBeGreaterThanOrEqual('ohne Projekt'.length * 8)
   })
 
   test('a name too long for the column is cut with an ellipsis', () => {
@@ -125,7 +125,7 @@ describe('timelineSvg', () => {
       width: 240,
     })
     const [, x, label] = tight.match(/<text x="(\d+)"[^>]*>([^<]*…)<\/text>/) ?? []
-    expect(label?.length).toBeLessThanOrEqual(Number(x) / 7)
+    expect(label?.length).toBeLessThanOrEqual(Number(x) / 8)
     expect(tight).toContain('<title>ein sehr langer Projektname · aktiv')
   })
 
