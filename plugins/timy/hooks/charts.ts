@@ -80,11 +80,13 @@ export const timelineSvg = ({
   const last = Math.max(...shown.map(([, end]) => end), isToday ? now : from)
   const start = floorHour(first)
   const end = Math.max(floorHour(last) + HOUR, start + HOUR)
-  const labelWidth = Math.round(Math.min(140, width * 0.25))
+  const parallel = parallelRanges(spans, from, to)
+  const longest = Math.max(0, ...rows.map(row => row.name.length), parallel.length > 0 ? 'parallel'.length : 0)
+  const labelWidth = Math.round(Math.min(140, width * 0.4, longest * CHAR_PX))
+  const fit = (text: string) => (text.length * CHAR_PX <= labelWidth ? text : `${text.slice(0, Math.max(1, Math.floor(labelWidth / CHAR_PX) - 1))}…`)
   const plot = width - labelWidth - LABEL_GAP - 12
   const x = (t: number) => labelWidth + LABEL_GAP + ((t - start) / (end - start)) * plot
   const w = ([a, b]: Range) => Math.max(1, x(b) - x(a))
-  const parallel = parallelRanges(spans, from, to)
   const height = 20 + rows.length * ROW + (parallel.length > 0 ? ROW : 0) + 4
   const hours = (end - start) / HOUR
   const every = Math.max(1, Math.ceil(hours / Math.max(1, Math.floor(plot / 48))))
@@ -100,7 +102,7 @@ export const timelineSvg = ({
     const y = 20 + i * ROW
     const color = colorOf(i)
     const name = escapeXml(row.name)
-    parts.push(`<text x="${labelWidth}" y="${y + 15}" text-anchor="end" fill="${color}" ${FONT}>${name}</text>`)
+    parts.push(`<text x="${labelWidth}" y="${y + 15}" text-anchor="end" fill="${color}" ${FONT}>${escapeXml(fit(row.name))}</text>`)
     const own = spans.filter(s => s.project === row.project)
     for (const [kind, top, h, opacity, what] of [
       ['selected', y + 5, 12, 1, 'aktiv'],

@@ -100,6 +100,34 @@ describe('timelineSvg', () => {
     expect(both).toContain('<title>parallel 10:00–10:20 (0:20)</title>')
   })
 
+  const labelX = (svg: string, name: string) => Number(svg.match(new RegExp(`<text x="(\\d+)"[^>]*>${name}</text>`))?.[1])
+
+  test('the label column fits the longest name in a narrow pane', () => {
+    const narrow = timelineSvg({
+      spans: [span('selected', 'a', at(9, 0), at(10, 0), '')],
+      rows: [{ project: '', name: 'ohne Projekt' }],
+      from: at(4, 0),
+      to: at(4, 0) + 24 * HOUR,
+      now: at(11, 0),
+      width: 320,
+    })
+    expect(labelX(narrow, 'ohne Projekt')).toBeGreaterThanOrEqual('ohne Projekt'.length * 7)
+  })
+
+  test('a name too long for the column is cut with an ellipsis', () => {
+    const tight = timelineSvg({
+      spans: [span('selected', 'a', at(9, 0), at(10, 0), 'x/y')],
+      rows: [{ project: 'x/y', name: 'ein sehr langer Projektname' }],
+      from: at(4, 0),
+      to: at(4, 0) + 24 * HOUR,
+      now: at(11, 0),
+      width: 240,
+    })
+    const [, x, label] = tight.match(/<text x="(\d+)"[^>]*>([^<]*…)<\/text>/) ?? []
+    expect(label?.length).toBeLessThanOrEqual(Number(x) / 7)
+    expect(tight).toContain('<title>ein sehr langer Projektname · aktiv')
+  })
+
   test('escapes project names', () => {
     const odd = timelineSvg({
       spans: [span('selected', 'a', at(9, 0), at(10, 0), 'x/<b>&')],
