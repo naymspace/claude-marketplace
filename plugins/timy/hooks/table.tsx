@@ -28,11 +28,14 @@ export const COLUMNS: Column[] = [
 
 const BAR_GAP = 2
 
-export const dayColumns = (width: number, hasTarget: boolean, isTargetShown: boolean): Column[] => [
-  COLUMNS[0]!,
-  ...(isTargetShown ? [{ title: 'Soll', width: 7, minBody: 36 }] : []),
-  ...(hasTarget ? [{ title: '', width: BAR_GAP + (width >= 80 ? 12 : 8), minBody: 52, isBar: true as const }] : []),
-]
+export const dayColumns = (hasTarget: boolean, isTargetShown: boolean): Column[] => {
+  const rest = COLUMNS[1]!.width + COLUMNS[2]!.width
+  return [
+    COLUMNS[0]!,
+    ...(isTargetShown ? [{ title: 'Soll', width: COLUMNS[1]!.width, minBody: 36 }] : []),
+    ...(hasTarget ? [{ title: '', width: isTargetShown ? rest - COLUMNS[1]!.width : rest, minBody: 52, isBar: true as const }] : []),
+  ]
+}
 
 export const isShown = (ms: number) => hm(ms) !== '0:00'
 

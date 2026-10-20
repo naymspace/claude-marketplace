@@ -206,7 +206,7 @@ const perDay = ({ ui }: PaneInput, layout: Layout, report: Report) => {
         <Text bold>Pro Tag</Text>
         {sameTarget === null ? null : <Text dimColor>{`Soll ${hm(sameTarget)}`}</Text>}
       </Box>
-      {table(ui, dayColumns(layout.columnWidth, hasTarget, sameTarget === null && hasTarget), rows, layout.columnWidth, 1)}
+      {table(ui, dayColumns(hasTarget, sameTarget === null && hasTarget), rows, layout.columnWidth, 1)}
     </Box>
   )
 }
