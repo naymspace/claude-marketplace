@@ -18,7 +18,7 @@ export type Report = {
   summary: Summary
   colors: Colors
   spans: Span[]
-  days: (ChartDay & { active: number })[]
+  days: ChartDay[]
 }
 
 type SvgElement = Extract<Ui, { Svg: unknown }>['Svg']
