@@ -5,6 +5,7 @@ import type { Engine } from 'claude-code/testing'
 import { PALETTE } from './charts'
 
 const SURFACES = ['terminal', 'desktop'] as const
+const IDLE_5 = { options: { idle_minutes: 5 } }
 const at = (d: number, h: number, m: number) => new Date(2026, 9, d, h, m).getTime()
 const DIR = '/home/x/.claude/timy'
 const FILE = `${DIR}/2026-10-15/s1.jsonl`
@@ -319,20 +320,20 @@ for (const surface of SURFACES) {
       expect(linesOf(env)).toHaveLength(1)
     })
 
-    test('idle_minutes below 1 falls back to 5', { options: { idle_minutes: 0 } }, async ($, on) => {
+    test('idle_minutes below 1 falls back to 3', { options: { idle_minutes: 0 } }, async ($, on) => {
       engine(on, todayFiles)
       const clock = mock.clock(on, { now: at(15, 9, 20) })
       await $.session.start(startOf(surface))
       await clock.settle()
       const ui = await $.ui.mount({ plugin: 'timy', surface, component: 'AbovePrompt', props })
-      expect(await textsOf(ui)).toContain('shop · heute 0:33 · Session 0:20:00 ▾')
+      expect(await textsOf(ui)).toContain('shop · heute 0:24 · Session 0:15:00 ▾')
     })
   })
 }
 
 for (const surface of SURFACES) {
   describe(`band on ${surface}`, () => {
-    test('band shows project and session time of today', async ($, on) => {
+    test('band shows project and session time of today', IDLE_5, async ($, on) => {
       engine(on, todayFiles)
       const clock = mock.clock(on, { now: at(15, 9, 20) })
       await $.session.start(startOf(surface))
@@ -341,7 +342,7 @@ for (const surface of SURFACES) {
       expect(await textsOf(ui)).toContain('shop · heute 0:33 · Session 0:20:00 ▾')
     })
 
-    test('band counts the part of a session that began before 4:00', async ($, on) => {
+    test('band counts the part of a session that began before 4:00', IDLE_5, async ($, on) => {
       engine(on, overFour)
       const clock = mock.clock(on, { now: at(15, 4, 20) })
       await $.session.start(startOf(surface))
@@ -375,7 +376,7 @@ for (const surface of SURFACES) {
       expect(await textsOf(ui)).not.toContain('●')
     })
 
-    test('a green dot shows that the session is counting', async ($, on) => {
+    test('a green dot shows that the session is counting', IDLE_5, async ($, on) => {
       engine(on, todayFiles)
       const clock = mock.clock(on, { now: at(15, 9, 20) })
       await $.session.start(startOf(surface))
@@ -384,7 +385,7 @@ for (const surface of SURFACES) {
       expect((await ui.find({ type: 'Text', text: '●' }))?.props.color).toBe('success')
     })
 
-    test('session time ticks every second without a new event', async ($, on) => {
+    test('session time ticks every second without a new event', IDLE_5, async ($, on) => {
       engine(on, todayFiles)
       const clock = mock.clock(on, { now: at(15, 9, 20) })
       await $.session.start(startOf(surface))
@@ -401,11 +402,11 @@ for (const surface of SURFACES) {
       await clock.settle()
       await clock.advance(6 * 60_000)
       const ui = await $.ui.mount({ plugin: 'timy', surface, component: 'AbovePrompt', props })
-      expect(await textsOf(ui)).toContain('shop · heute 0:38 · Session 0:25:00 ▾')
+      expect(await textsOf(ui)).toContain('shop · heute 0:27 · Session 0:18:00 ▾')
       expect((await ui.find({ type: 'Text', text: '●' }))?.props.color).toBe('warning')
     })
 
-    test('pressing the band unfolds today per project and folds it again', async ($, on) => {
+    test('pressing the band unfolds today per project and folds it again', IDLE_5, async ($, on) => {
       engine(on, reportFiles)
       const clock = mock.clock(on, { now: at(15, 18, 0) })
       await $.session.start(startOf(surface))
@@ -422,7 +423,7 @@ for (const surface of SURFACES) {
       expect((await textsOf(ui)).some(t => t.startsWith('Summe'))).toBe(false)
     })
 
-    test('an unfolded band drops session lines when they do not fit', async ($, on) => {
+    test('an unfolded band drops session lines when they do not fit', IDLE_5, async ($, on) => {
       engine(on, reportFiles)
       const clock = mock.clock(on, { now: at(15, 18, 0) })
       await $.session.start(startOf(surface))
@@ -434,7 +435,7 @@ for (const surface of SURFACES) {
       expect(texts.some(t => t.includes('#12 Login-Seite'))).toBe(false)
     })
 
-    test('band shows today against the day target', { options: { hours_per_weekday: '6,6,6,6,6' } }, async ($, on) => {
+    test('band shows today against the day target', { options: { idle_minutes: 5, hours_per_weekday: '6,6,6,6,6' } }, async ($, on) => {
       engine(on, todayFiles)
       const clock = mock.clock(on, { now: at(15, 9, 20) })
       await $.session.start(startOf(surface))
@@ -445,7 +446,7 @@ for (const surface of SURFACES) {
       expect(await barsOf(ui)).toEqual([{ color: 'subtle', width: 6 }])
     })
 
-    test('work after midnight still counts to the day before', async ($, on) => {
+    test('work after midnight still counts to the day before', IDLE_5, async ($, on) => {
       engine(on, lateNight)
       const clock = mock.clock(on, { now: at(15, 0, 55) })
       await $.session.start(startOf(surface))
@@ -454,7 +455,7 @@ for (const surface of SURFACES) {
       expect(await textsOf(ui)).toContain('shop · heute 1:25 · Session 1:25:00 ▾')
     })
 
-    test('a medium band keeps the day time and drops its bar', { options: { hours_per_weekday: '6,6,6,6,6' } }, async ($, on) => {
+    test('a medium band keeps the day time and drops its bar', { options: { idle_minutes: 5, hours_per_weekday: '6,6,6,6,6' } }, async ($, on) => {
       engine(on, todayFiles)
       const clock = mock.clock(on, { now: at(15, 9, 20) })
       await $.session.start(startOf(surface))
@@ -465,7 +466,7 @@ for (const surface of SURFACES) {
       expect(await barsOf(ui)).toEqual([])
     })
 
-    test('a narrow band shows only the two times', async ($, on) => {
+    test('a narrow band shows only the two times', IDLE_5, async ($, on) => {
       engine(on, todayFiles)
       const clock = mock.clock(on, { now: at(15, 9, 20) })
       await $.session.start(startOf(surface))
@@ -476,7 +477,7 @@ for (const surface of SURFACES) {
       expect(texts.some(t => t.startsWith('Tag '))).toBe(false)
     })
 
-    test('without a configured target the band shows the day total alone', async ($, on) => {
+    test('without a configured target the band shows the day total alone', IDLE_5, async ($, on) => {
       engine(on, todayFiles)
       const clock = mock.clock(on, { now: at(15, 9, 20) })
       await $.session.start(startOf(surface))
@@ -486,7 +487,7 @@ for (const surface of SURFACES) {
       expect(await barsOf(ui)).toEqual([])
     })
 
-    test('the band shows a loading line until the day is read', async ($, on) => {
+    test('the band shows a loading line until the day is read', IDLE_5, async ($, on) => {
       const env = engine(on, todayFiles)
       let release = () => {}
       env.readGates.set(`${DIR}/2026-10-15/s2.jsonl`, new Promise<void>(resolve => (release = resolve)))
@@ -501,7 +502,7 @@ for (const surface of SURFACES) {
       expect(await textsOf(ui)).toContain('shop · heute 0:33 · Session 0:20:00 ▾')
     })
 
-    test('a weekday without target shows the day total alone', { options: { hours_per_weekday: '6,6,6' } }, async ($, on) => {
+    test('a weekday without target shows the day total alone', { options: { idle_minutes: 5, hours_per_weekday: '6,6,6' } }, async ($, on) => {
       engine(on, todayFiles)
       const clock = mock.clock(on, { now: at(15, 9, 20) })
       await $.session.start(startOf(surface))
@@ -510,7 +511,7 @@ for (const surface of SURFACES) {
       expect(await textsOf(ui)).toContain('Tag 0:20')
     })
 
-    test('the band button opens the pane on today', async ($, on) => {
+    test('the band button opens the pane on today', IDLE_5, async ($, on) => {
       const env = engine(on, reportFiles)
       const clock = mock.clock(on, { now: at(15, 18, 0) })
       await $.session.start(startOf(surface))
@@ -522,7 +523,7 @@ for (const surface of SURFACES) {
       expect((await textsOf(pane)).some(t => /^(● )?shop 1:40 /.test(t))).toBe(true)
     })
 
-    test('/timy says so and unfolds the band when no surface places the pane', async ($, on) => {
+    test('/timy says so and unfolds the band when no surface places the pane', IDLE_5, async ($, on) => {
       const env = engine(on, reportFiles)
       env.unplaced = 'older desktop'
       const clock = mock.clock(on, { now: at(15, 18, 0) })
@@ -596,7 +597,7 @@ const openZeit = async (
 
 for (const surface of SURFACES) {
   describe(`/timy on ${surface}`, () => {
-    test('/timy opens the pane on today', async ($, on) => {
+    test('/timy opens the pane on today', IDLE_5, async ($, on) => {
       engine(on, reportFiles)
       const clock = mock.clock(on, { now: at(15, 18, 0) })
       await $.session.start(startOf(surface))
@@ -635,7 +636,7 @@ for (const surface of SURFACES) {
       expect(cells('#12 Login-Seite')).toBe(cells('Summe'))
     })
 
-    test('a narrow pane keeps only the selected time column', async ($, on) => {
+    test('a narrow pane keeps only the selected time column', IDLE_5, async ($, on) => {
       engine(on, reportFiles)
       const clock = mock.clock(on, { now: at(15, 18, 0) })
       await $.session.start(startOf(surface))
@@ -646,7 +647,7 @@ for (const surface of SURFACES) {
       expect(texts).toContain('Summe 2:30')
     })
 
-    test('today tab counts the part of a session that began before 4:00', async ($, on) => {
+    test('today tab counts the part of a session that began before 4:00', IDLE_5, async ($, on) => {
       engine(on, overFour)
       const clock = mock.clock(on, { now: at(15, 4, 20) })
       await $.session.start(startOf(surface))
@@ -655,7 +656,7 @@ for (const surface of SURFACES) {
       expect((await textsOf(ui)).some(t => t.startsWith('shop 0:20 '))).toBe(true)
     })
 
-    test('week tab sums the days of the week', { options: { hours_per_weekday: '8,8,8,8,8' } }, async ($, on) => {
+    test('week tab sums the days of the week', { options: { idle_minutes: 5, hours_per_weekday: '8,8,8,8,8' } }, async ($, on) => {
       engine(on, reportFiles)
       const clock = mock.clock(on, { now: at(15, 18, 0) })
       await $.session.start(startOf(surface))
@@ -669,7 +670,7 @@ for (const surface of SURFACES) {
       expect(texts).toContain('Do 15.10. 2:30')
     })
 
-    test('per day shows the target per row when it differs', { options: { hours_per_weekday: '6,8,8,8,8' } }, async ($, on) => {
+    test('per day shows the target per row when it differs', { options: { idle_minutes: 5, hours_per_weekday: '6,8,8,8,8' } }, async ($, on) => {
       engine(on, reportFiles)
       const clock = mock.clock(on, { now: at(15, 18, 0) })
       await $.session.start(startOf(surface))
@@ -681,7 +682,7 @@ for (const surface of SURFACES) {
       expect(texts).toContain('Do 15.10. 2:30 8:00')
     })
 
-    test('today shows writing and Claude time per session', async ($, on) => {
+    test('today shows writing and Claude time per session', IDLE_5, async ($, on) => {
       const file = `${DIR}/2026-10-15/s9.jsonl`
       engine(on, {
         ...reportFiles,
@@ -700,7 +701,7 @@ for (const surface of SURFACES) {
       expect(await textsOf(await openZeit($, surface))).toContain('Claude Test 0:05 0:00 0:10')
     })
 
-    test('week tab shows projects folded and unfolds one on press', async ($, on) => {
+    test('week tab shows projects folded and unfolds one on press', IDLE_5, async ($, on) => {
       engine(on, reportFiles)
       const clock = mock.clock(on, { now: at(15, 18, 0) })
       await $.session.start(startOf(surface))
@@ -715,7 +716,7 @@ for (const surface of SURFACES) {
       expect(texts.some(t => t.startsWith('▸ blog 0:50 '))).toBe(true)
     })
 
-    test('week tab pages back to earlier weeks and forward again', async ($, on) => {
+    test('week tab pages back to earlier weeks and forward again', IDLE_5, async ($, on) => {
       engine(on, { ...reportFiles, [`${DIR}/2026-10-07/b.jsonl`]: busy(7, 'b', 'beispiel/shop', 9, 0, 45) })
       const clock = mock.clock(on, { now: at(15, 18, 0) })
       await $.session.start(startOf(surface))
@@ -733,7 +734,7 @@ for (const surface of SURFACES) {
       expect(texts.some(t => t.startsWith('▸ shop 2:10 '))).toBe(true)
     })
 
-    test('a tab seen before shows at once while it reloads', async ($, on) => {
+    test('a tab seen before shows at once while it reloads', IDLE_5, async ($, on) => {
       const env = engine(on, reportFiles)
       const clock = mock.clock(on, { now: at(15, 18, 0) })
       await $.session.start(startOf(surface))
@@ -754,7 +755,7 @@ for (const surface of SURFACES) {
       expect(await textsOf(ui)).not.toContain('lädt …')
     })
 
-    test('a slow month load does not overwrite the week the person switched to', async ($, on) => {
+    test('a slow month load does not overwrite the week the person switched to', IDLE_5, async ($, on) => {
       const slow = `${DIR}/2026-10-02/z.jsonl`
       const env = engine(on, { ...reportFiles, [slow]: busy(2, 'z', 'beispiel/shop', 9, 0, 30) })
       const clock = mock.clock(on, { now: at(15, 18, 0) })
@@ -773,7 +774,7 @@ for (const surface of SURFACES) {
       expect(texts.some(t => t.startsWith('▸ shop 2:10 '))).toBe(true)
     })
 
-    test('an unreadable period keeps the last report and toasts', async ($, on) => {
+    test('an unreadable period keeps the last report and toasts', IDLE_5, async ($, on) => {
       const env = engine(on, reportFiles)
       const clock = mock.clock(on, { now: at(15, 18, 0) })
       await $.session.start(startOf(surface))
@@ -841,7 +842,7 @@ const svgsOf = async (ui: { findAll: (q: { type: string }) => Promise<Found[]> }
   (await ui.findAll({ type: 'Svg' })).map(svg => svg.props as { source: string; alt: string; width: number; isInteractive?: boolean })
 
 describe('/timy charts', () => {
-  test('today on desktop opens as a timeline with tiles and a colour legend', { options: { hours_per_weekday: '8,8,8,8,8' } }, async ($, on) => {
+  test('today on desktop opens as a timeline with tiles and a colour legend', { options: { idle_minutes: 5, hours_per_weekday: '8,8,8,8,8' } }, async ($, on) => {
     engine(on, reportFiles)
     const clock = mock.clock(on, { now: at(15, 18, 0) })
     await $.session.start(startOf('desktop'))
@@ -900,7 +901,7 @@ describe('/timy charts', () => {
     expect((await textsOf(ui)).some(t => /^Claude \d+:\d\d · parallel \d+:\d\d$/.test(t))).toBe(true)
   })
 
-  test('week on desktop shows one stacked bar per day with its target', { options: { hours_per_weekday: '8,8,8,8,8' } }, async ($, on) => {
+  test('week on desktop shows one stacked bar per day with its target', { options: { idle_minutes: 5, hours_per_weekday: '8,8,8,8,8' } }, async ($, on) => {
     engine(on, reportFiles)
     const clock = mock.clock(on, { now: at(15, 18, 0) })
     await $.session.start(startOf('desktop'))
@@ -915,7 +916,7 @@ describe('/timy charts', () => {
     expect((await textsOf(ui)).includes('Pro Tag')).toBe(false)
   })
 
-  test('the view buttons switch between chart and table', async ($, on) => {
+  test('the view buttons switch between chart and table', IDLE_5, async ($, on) => {
     engine(on, reportFiles)
     const clock = mock.clock(on, { now: at(15, 18, 0) })
     await $.session.start(startOf('desktop'))
@@ -928,7 +929,7 @@ describe('/timy charts', () => {
     expect(await svgsOf(ui)).toHaveLength(1)
   })
 
-  test('the terminal keeps the table and offers no chart', async ($, on) => {
+  test('the terminal keeps the table and offers no chart', IDLE_5, async ($, on) => {
     engine(on, reportFiles)
     const clock = mock.clock(on, { now: at(15, 18, 0) })
     await $.session.start(startOf('terminal'))
@@ -944,7 +945,7 @@ describe('/timy charts', () => {
 describe('/timy live', () => {
   const later = busy(15, 'd', 'beispiel/shop', 18, 0, 20)
 
-  test('a shown pane picks up new time every minute without a loading hint', async ($, on) => {
+  test('a shown pane picks up new time every minute without a loading hint', IDLE_5, async ($, on) => {
     const env = engine(on, reportFiles)
     env.panes = [{ id: 'timy', isShown: true }]
     const clock = mock.clock(on, { now: at(15, 18, 0) })
@@ -959,7 +960,7 @@ describe('/timy live', () => {
     expect(texts).not.toContain('lädt …')
   })
 
-  test('a hidden pane is not rebuilt', async ($, on) => {
+  test('a hidden pane is not rebuilt', IDLE_5, async ($, on) => {
     const env = engine(on, reportFiles)
     env.panes = [{ id: 'timy', isShown: false }]
     const clock = mock.clock(on, { now: at(15, 18, 0) })
@@ -974,7 +975,7 @@ describe('/timy live', () => {
 })
 
 describe('/timy day paging', () => {
-  test('the day tab pages back to yesterday and forward again', async ($, on) => {
+  test('the day tab pages back to yesterday and forward again', IDLE_5, async ($, on) => {
     engine(on, reportFiles)
     const clock = mock.clock(on, { now: at(15, 18, 0) })
     await $.session.start(startOf('terminal'))
@@ -1048,7 +1049,7 @@ describe('/timy layout and failure', () => {
 })
 
 describe('/timy after a reload', () => {
-  test('a pane left open is drawn again at start', async ($, on) => {
+  test('a pane left open is drawn again at start', IDLE_5, async ($, on) => {
     const env = engine(on, reportFiles)
     env.panes = [{ id: 'timy', isShown: true }]
     const clock = mock.clock(on, { now: at(15, 18, 0) })

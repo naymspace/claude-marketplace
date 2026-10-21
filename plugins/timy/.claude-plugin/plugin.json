@@ -13,7 +13,7 @@
       "type": "number",
       "title": "Leerlauf-Grenze (Minuten)",
       "description": "Nach so vielen Minuten ohne Eingabe zählt „Aktiv“ nicht weiter, auch wenn Claude noch arbeitet.",
-      "default": 5
+      "default": 3
     },
     "data_dir": {
       "type": "string",

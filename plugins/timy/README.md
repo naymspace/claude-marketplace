@@ -42,6 +42,6 @@ Change them with `/plugin configure timy@naymspace-marketplace`.
 
 | Option | Default | What it does |
 |---|---|---|
-| `idle_minutes` | `5` | Minutes without input after which `Aktiv` stops counting |
+| `idle_minutes` | `3` | Minutes without input after which `Aktiv` stops counting |
 | `data_dir` | `~/.claude/timy` | Folder for the data |
 | `hours_per_weekday` | no target | Your target Monday to Sunday, for example `8,8,8,8,8` |

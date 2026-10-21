@@ -288,7 +288,7 @@ const start = async ($: EngineInterface, { idleMinutes, dataDir, hoursPerWeekday
 
 export const register: Register = (on, options) => {
   const settings: Settings = {
-    idleMinutes: typeof options.idle_minutes === 'number' && options.idle_minutes >= 1 ? options.idle_minutes : 5,
+    idleMinutes: typeof options.idle_minutes === 'number' && options.idle_minutes >= 1 ? options.idle_minutes : 3,
     dataDir: typeof options.data_dir === 'string' ? options.data_dir : '',
     hoursPerWeekday: typeof options.hours_per_weekday === 'string' ? options.hours_per_weekday : '',
   }
