@@ -189,7 +189,7 @@ export const barsSvg = ({ days, rows, width }: { days: readonly ChartDay[]; rows
     }
     if (day.target > 0) {
       parts.push(
-        `<line x1="${x0 - 3}" y1="${y(day.target)}" x2="${x0 + barWidth + 3}" y2="${y(day.target)}" stroke="${MUTED}" stroke-width="1.5" stroke-dasharray="3 2">` +
+        `<line x1="${x0 - 5}" y1="${y(day.target)}" x2="${x0 + barWidth + 5}" y2="${y(day.target)}" stroke="${NOW}" stroke-width="2" stroke-dasharray="3 2">` +
           `<title>Soll ${hm(day.target)}</title></line>`,
       )
     }

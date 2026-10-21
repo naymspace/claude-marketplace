@@ -168,6 +168,13 @@ describe('barsSvg', () => {
     expect(barsSvg({ days, rows, width: 600 }).match(/<title>Soll 6:00<\/title>/g)).toHaveLength(2)
   })
 
+  test('the target line stands out from the grid', () => {
+    const svg = barsSvg({ days, rows, width: 600 })
+    const grid = svg.match(/<line [^>]*stroke="([^"]+)" stroke-opacity/)?.[1]
+    const target = svg.match(/<line [^>]*stroke="([^"]+)"[^>]*stroke-dasharray/)?.[1]
+    expect(target).not.toBe(grid)
+  })
+
   test('parallel time counts once in the bar and its total', () => {
     const day = { labels: ['Di 13.10.', 'Di 13.', '13'], isMonday: false, target: 6 * HOUR }
     const parallel = { ...day, active: 4 * HOUR, byProject: [['beispiel/shop', 3 * HOUR], ['beispiel/blog', 2 * HOUR]] as const }
