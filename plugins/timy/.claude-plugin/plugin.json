@@ -12,7 +12,7 @@
     "idle_minutes": {
       "type": "number",
       "title": "Leerlauf-Grenze (Minuten)",
-      "description": "Nach so vielen Minuten ohne Eingabe zählt „Aktiv“ nicht weiter, außer Claude arbeitet gerade (dann bis zu 2 Stunden).",
+      "description": "Nach so vielen Minuten ohne Eingabe zählt „Aktiv“ nicht weiter, auch wenn Claude noch arbeitet.",
       "default": 5
     },
     "data_dir": {

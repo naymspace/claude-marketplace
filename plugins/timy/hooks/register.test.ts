@@ -697,7 +697,7 @@ for (const surface of SURFACES) {
       const clock = mock.clock(on, { now: at(15, 18, 0) })
       await $.session.start(startOf(surface))
       await clock.settle()
-      expect(await textsOf(await openZeit($, surface))).toContain('Claude Test 0:12 0:00 0:10')
+      expect(await textsOf(await openZeit($, surface))).toContain('Claude Test 0:05 0:00 0:10')
     })
 
     test('week tab shows projects folded and unfolds one on press', async ($, on) => {

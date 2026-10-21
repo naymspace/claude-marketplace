@@ -53,15 +53,11 @@ export const sessionSpans = (events: readonly TimyEvent[], idleMs: number, now: 
   let phaseStart: number | null = null
   let lastTyping = 0
 
-  const closeSelected = (until: number, openSince: number | null) => {
-    if (lastActivity === null) return
-    const idleEnd = Math.min(until, lastActivity + idleMs)
-    add('selected', lastActivity, idleEnd)
-    if (openSince !== null) add('selected', Math.max(openSince, idleEnd), Math.min(until, openSince + OPEN_CAP_MS))
+  const closeSelected = (until: number) => {
+    if (lastActivity !== null) add('selected', lastActivity, Math.min(until, lastActivity + idleMs))
   }
 
   for (const event of sorted) {
-    const openSince = turnStart
     if (event.type === 'turn-start' && turnStart === null) turnStart = event.t
     if (event.type === 'turn-end' && turnStart !== null) {
       add('claude', turnStart, Math.min(event.t, turnStart + OPEN_CAP_MS))
@@ -78,23 +74,22 @@ export const sessionSpans = (events: readonly TimyEvent[], idleMs: number, now: 
     }
 
     if (event.type === 'detach') {
-      if (attached) closeSelected(event.t, openSince)
+      if (attached) closeSelected(event.t)
       attached = false
       lastActivity = null
       continue
     }
 
-    if (event.type === 'turn-start') continue
-    if (event.type === 'turn-end' && !attached) continue
+    if (event.type !== 'attach' && event.type !== 'edit' && event.type !== 'submit') continue
 
-    if (attached) closeSelected(event.t, openSince)
+    if (attached) closeSelected(event.t)
     attached = true
     lastActivity = event.t
   }
 
   if (turnStart !== null) add('claude', turnStart, Math.min(closeAt, turnStart + OPEN_CAP_MS))
   if (phaseStart !== null) add('writing', phaseStart, Math.min(lastTyping + EDIT_SLICE_MS, closeAt))
-  if (attached) closeSelected(closeAt, turnStart)
+  if (attached) closeSelected(now)
 
   return spans
 }

@@ -12,7 +12,7 @@ Above the prompt there is a band with the project, today's time and the day agai
 
 ## How it counts
 
-timy notes a few events per session: when you open it, type, send something and when Claude is done. Three times come out of that. `Aktiv` keeps counting for up to `idle_minutes` after each event, and while Claude works it counts until Claude is done (at most 2 hours). Closing the session stops it at once. `Tippen` is the time in the prompt, `Claude` the time Claude works.
+timy notes a few events per session: when you open it, type, send something and when Claude is done. Three times come out of that. `Aktiv` keeps counting for up to `idle_minutes` after you open the session, type or send something; Claude working on its own does not keep it going. Closing the session stops it at once. `Tippen` is the time in the prompt, `Claude` the time Claude works.
 
 If two sessions run at the same time, the time counts in each of their projects. The table then shows under `Summe` how much of it was `parallel`, the number at the top counts it only once.
 
