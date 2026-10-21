@@ -71,6 +71,19 @@ const floorHour = (t: number) => {
 
 const LABEL_GAP = 8
 const ROW = 30
+const CLAUDE_GAP_MS = 60_000
+
+const blocks = (ranges: readonly Range[], gap: number): { range: Range; worked: number }[] => {
+  const joined: { range: Range; worked: number }[] = []
+  for (const [start, end] of ranges) {
+    const last = joined.at(-1)
+    if (last && start - last.range[1] < gap) {
+      last.range[1] = end
+      last.worked += end - start
+    } else joined.push({ range: [start, end], worked: end - start })
+  }
+  return joined
+}
 
 export const timelineSvg = ({
   spans,
@@ -118,14 +131,14 @@ export const timelineSvg = ({
     const name = escapeXml(row.name)
     parts.push(`<text x="${labelWidth}" y="${y + 15}" text-anchor="end" fill="${color}" ${FONT}>${escapeXml(fit(row.name))}</text>`)
     const own = spans.filter(s => s.project === row.project)
-    for (const [kind, top, h, opacity, what] of [
-      ['selected', y + 5, 12, 1, 'aktiv'],
-      ['claude', y + 19, 6, 0.65, 'Claude'],
+    for (const [kind, top, h, opacity, what, gap] of [
+      ['selected', y + 5, 12, 1, 'aktiv', 0],
+      ['claude', y + 19, 6, 0.65, 'Claude', CLAUDE_GAP_MS],
     ] as const) {
-      for (const range of merge(clip(own.filter(s => s.kind === kind), start, end))) {
+      for (const { range, worked } of blocks(merge(clip(own.filter(s => s.kind === kind), start, end)), gap)) {
         parts.push(
           `<rect x="${x(range[0])}" y="${top}" width="${w(range)}" height="${h}" rx="2" fill="${color}" fill-opacity="${opacity}">` +
-            `<title>${name} · ${what} ${clock(range[0])}–${clock(range[1])} (${hm(range[1] - range[0])})</title></rect>`,
+            `<title>${name} · ${what} ${clock(range[0])}–${clock(range[1])} (${hm(worked)})</title></rect>`,
         )
       }
     }
