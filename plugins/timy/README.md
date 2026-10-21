@@ -12,7 +12,7 @@ Above the prompt there is a band with the project, today's time and the day agai
 
 ## How it counts
 
-timy notes a few events per session: when you open it, type, send something and when Claude is done. Three times come out of that. `Aktiv` keeps counting for up to `idle_minutes` after you open the session, type or send something; Claude working on its own does not keep it going. Closing the session stops it at once. `Tippen` is the time in the prompt, `Claude` the time Claude works.
+timy notes a few events per session: when you open it, type, send something and when Claude is done, and once a minute when Claude worked. Three times come out of that. `Aktiv` keeps counting for up to `idle_minutes` after you open the session, type or send something; Claude working on its own does not keep it going. Closing the session stops it at once. `Tippen` is the time in the prompt. `Claude` counts while a model request or a tool runs, subagents included, at most 15 minutes per run; a question to you or a plan waiting for your approval does not count, a turn that just stays open does not either.
 
 If two sessions run at the same time, the time counts in each of their projects. The table then shows under `Summe` how much of it was `parallel`, the number at the top counts it only once.
 
@@ -24,6 +24,12 @@ One file per session and day under `~/.claude/timy`, one line per event:
 
 ```json
 {"t":"2026-10-15T09:24:00.000Z","type":"submit","project":"firma/shop","session":"3f2a9c1e-5b7d-4e8a-9c21-6d0f4b8a7e13","branch":"feature/12-login","title":"#12 Login page"}
+```
+
+Beside it `<session>.claude.jsonl` holds at most one line per minute with the stretches in which Claude worked, as start and end in milliseconds:
+
+```json
+{"t":"2026-10-15T09:25:03.000Z","type":"claude","project":"firma/shop","session":"3f2a9c1e-5b7d-4e8a-9c21-6d0f4b8a7e13","ranges":[[1792056303000,1792056341000]]}
 ```
 
 Next to them `colors.json` remembers which colour each project has in the charts. Neither prompts nor answers are stored. If you want to start over, delete the folder.
