@@ -1,5 +1,5 @@
 import { EVENT_TYPES, mondayIndex, pad } from './model'
-import type { TimyEvent } from './model'
+import type { Range, TimyEvent } from './model'
 
 export type Fs = {
   read: (path: string) => Promise<string>
@@ -52,6 +52,9 @@ export const daysBetween = (from: number, to: number): string[] => {
 
 const toLine = (event: TimyEvent): string => JSON.stringify({ ...event, t: new Date(event.t).toISOString() })
 
+const isRanges = (value: unknown): value is Range[] =>
+  Array.isArray(value) && value.every(range => Array.isArray(range) && range.length === 2 && range.every(Number.isFinite) && range[1] > range[0])
+
 const fromLine = (line: string): TimyEvent | null => {
   try {
     const raw = JSON.parse(line)
@@ -59,6 +62,7 @@ const fromLine = (line: string): TimyEvent | null => {
     if (Number.isNaN(t) || !EVENT_TYPES.includes(raw.type) || typeof raw.project !== 'string' || typeof raw.session !== 'string') {
       return null
     }
+    if (raw.type === 'claude' && !isRanges(raw.ranges)) return null
     return { ...raw, t }
   } catch {
     return null
@@ -73,7 +77,7 @@ export class SessionLog {
   constructor(
     private readonly fs: Fs,
     private readonly dir: string,
-    private readonly session: string,
+    private readonly name: string,
   ) {}
 
   append(event: TimyEvent): Promise<void> {
@@ -84,7 +88,7 @@ export class SessionLog {
 
   private async write(event: TimyEvent): Promise<void> {
     const day = dayKey(event.t)
-    const path = `${this.dir}/${day}/${this.session}.jsonl`
+    const path = `${this.dir}/${day}/${this.name}.jsonl`
     if (day !== this.day) {
       const lines = (await this.fs.exists(path)) ? (await this.fs.read(path)).split('\n').filter(Boolean) : []
       this.lines = lines

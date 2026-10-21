@@ -128,6 +128,29 @@ describe('sessionSpans', () => {
   })
 })
 
+describe('Claude work', () => {
+  const work = (t: number, ranges: [number, number][]): TimyEvent => ({ ...ev('claude', t), ranges })
+
+  test('Claude time is the union of the recorded work and ignores how long the turn stayed open', () => {
+    const spans = sessionSpans(
+      [
+        ev('turn-start', at(9, 0)),
+        work(at(9, 0), [[at(9, 0), at(9, 0, 20)], [at(9, 0, 30), at(9, 1)]]),
+        work(at(9, 0, 50), [[at(9, 0, 50), at(9, 1, 40)]]),
+        ev('turn-end', at(9, 30)),
+      ],
+      IDLE,
+      at(10, 0),
+    )
+    expect(total(spans, 'claude')).toBe(20_000 + 70_000)
+  })
+
+  test('a session without work lines keeps counting its turns', () => {
+    const spans = sessionSpans([ev('turn-start', at(9, 0)), ev('turn-end', at(9, 30))], IDLE, at(10, 0))
+    expect(total(spans, 'claude')).toBe(30 * MIN)
+  })
+})
+
 describe('sessionState', () => {
   test('counts selected time since the given start and is counting inside the idle limit', () => {
     const state = sessionState(example, IDLE, at(10, 6), at(10, 2))

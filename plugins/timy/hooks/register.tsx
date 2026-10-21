@@ -3,8 +3,8 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import { renderBand, renderBandNote } from './band'
 import type { Live } from './band'
-import { allSpans, unionLength, dayTarget, projectName, sessionLabels, sessionState, shortProject, summarize } from './model'
-import type { EventType } from './model'
+import { allSpans, merge, unionLength, dayTarget, projectName, sessionLabels, sessionState, shortProject, summarize } from './model'
+import type { EventType, Range } from './model'
 import { renderPane } from './pane'
 import type { Report, View } from './pane'
 import { dayLabels, periodTitle, rangeOf } from './period'
@@ -14,6 +14,8 @@ import { assignColors } from './charts'
 import type { Fs } from './store'
 
 const EDIT_THROTTLE_MS = 10_000
+const WORK_CAP_MS = 15 * 60_000
+const WAITING_TOOLS = new Set(['AskUserQuestion', 'ExitPlanMode'])
 const PANE = 'timy'
 const PANE_WINDOW = { id: PANE, title: 'timy', closeOnEscape: true } as const
 const BAND_DRAWN = { plugin: 'timy', key: 'band' } as const
@@ -34,6 +36,7 @@ type Ctx = {
   branch?: string
   title?: string
   log: SessionLog
+  work: SessionLog
 }
 
 type Settings = { idleMinutes: number; dataDir: string; hoursPerWeekday: string }
@@ -41,6 +44,8 @@ type Settings = { idleMinutes: number; dataDir: string; hoursPerWeekday: string 
 const SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
 
 const recording: { ctx: Ctx | null; lastEdit: number; isTurnOpen: boolean } = { ctx: null, lastEdit: 0, isTurnOpen: false }
+
+const work: { open: Map<string, Promise<number>>; done: Range[]; countedTo: number } = { open: new Map(), done: [], countedTo: 0 }
 
 const band: {
   live: Live | null
@@ -127,6 +132,37 @@ const record = async ($: EngineInterface, type: EventType) => {
     return
   }
   void refreshLive($)
+}
+
+const startWork = ($: EngineInterface, key: string) => {
+  work.open.set(key, $.clock.now())
+}
+
+const endWork = async ($: EngineInterface, key: string) => {
+  const started = work.open.get(key)
+  if (started === undefined) return
+  const end = await $.clock.now()
+  const start = await started
+  work.open.delete(key)
+  work.done.push([Math.max(start, work.countedTo), Math.min(end, start + WORK_CAP_MS)])
+}
+
+const flushWork = async ($: EngineInterface) => {
+  const now = await $.clock.now()
+  const open = await Promise.all([...work.open].map(async ([key, started]) => [key, await started] as const))
+  const ranges = merge([...work.done, ...open.map(([, start]): Range => [Math.max(start, work.countedTo), Math.min(now, start + WORK_CAP_MS)])])
+  for (const [key, start] of open) if (start + WORK_CAP_MS <= now) work.open.delete(key)
+  work.done = []
+  work.countedTo = now
+  const counted = ranges.filter(([start, end]) => end > start)
+  const ctx = recording.ctx
+  if (ctx === null || counted.length === 0) return
+  const { session, project, branch, title } = ctx
+  try {
+    await ctx.work.append({ t: counted[0]![0], type: 'claude', project, session, branch, title, ranges: counted })
+  } catch {
+    // a lost minute of Claude time must never block the clock or a turn
+  }
 }
 
 const buildReport = async ($: EngineInterface, c: Ctx, tab: Tab, offset: number): Promise<Report> => {
@@ -281,6 +317,7 @@ const start = async ($: EngineInterface, { idleMinutes, dataDir, hoursPerWeekday
     project: projectName(repo?.remote ?? null, repo?.root ?? null),
     branch: repo ? await readBranch($) : undefined,
     log: new SessionLog(fs, dir, session),
+    work: new SessionLog(fs, dir, `${session}.claude`),
   }
   void readTitle($)
   if ((await $.session.surfaces()).length > 0) await record($, 'attach')
@@ -306,6 +343,7 @@ export const register: Register = (on, options) => {
     await refreshLive($)
     void reopenPane($)
     $.clock.every(60_000, async () => {
+      await flushWork($)
       await refreshLive($)
       await refreshPane($)
     })
@@ -316,6 +354,7 @@ export const register: Register = (on, options) => {
   on('classic.SessionStart', async ($, e, next) => {
     const started = await next(e)
     if (recording.ctx !== null && (await $.session.id()) !== recording.ctx.session) {
+      await flushWork($)
       recording.isTurnOpen = false
       recording.lastEdit = 0
       await start($, settings)
@@ -364,11 +403,34 @@ export const register: Register = (on, options) => {
     recording.isTurnOpen = false
     await readTitle($)
     await record($, 'turn-end')
+    await flushWork($)
     return done
+  })
+
+  on('turn.step', async function* ($, e, next) {
+    const key = `step:${e.agentId ?? 'main'}:${e.turnId}:${e.index}`
+    startWork($, key)
+    try {
+      return yield* next(e)
+    } finally {
+      void endWork($, key).catch(() => undefined)
+    }
+  })
+
+  on('tool.call', async ($, e, next) => {
+    if (WAITING_TOOLS.has(e.tool)) return next(e)
+    const key = `tool:${e.tool_use_id}`
+    startWork($, key)
+    try {
+      return await next(e)
+    } finally {
+      void endWork($, key).catch(() => undefined)
+    }
   })
 
   on('session.end', async ($, e, next) => {
     if (recording.isTurnOpen) await record($, 'turn-end')
+    await flushWork($)
     await record($, 'detach')
     return next(e)
   })

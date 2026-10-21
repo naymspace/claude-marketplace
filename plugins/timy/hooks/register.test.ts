@@ -331,6 +331,129 @@ for (const surface of SURFACES) {
   })
 }
 
+const WORK_FILE = `${DIR}/2026-10-15/s1.claude.jsonl`
+const STEP = { turnId: 't1', index: 0, model: 'claude-opus-5-5', messageCount: 1 }
+
+const beneath = (on: On) => {
+  const waiting: (() => void)[] = []
+  const wait = () => new Promise<void>(resolve => waiting.push(resolve))
+  on('turn.step', async function* (_$, e) {
+    await wait()
+    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn' as const, usage: null }
+  })
+  on('tool.call', async () => {
+    await wait()
+    return { result: { marker: 42 } }
+  })
+  return () => waiting.shift()?.()
+}
+
+const drain = async <C, R>(stream: AsyncGenerator<C, R>) => {
+  let chunk = await stream.next()
+  while (!chunk.done) chunk = await stream.next()
+  return chunk.value
+}
+
+const workRanges = (env: Env) => linesOf(env, WORK_FILE).map(l => l.ranges as [number, number][])
+
+describe('Claude work', () => {
+  test('model requests and tool runs are written once a minute, a question to the person is not', async ($, on) => {
+    const env = engine(on)
+    const release = beneath(on)
+    const clock = mock.clock(on, { now: at(15, 10, 0) })
+    await $.session.start(startOf('desktop'))
+    const step = drain($.turn.step(STEP))
+    await clock.advance(20_000)
+    release()
+    await step
+    const tool = $.tool.call({ tool: 'Bash', command: 'ls' })
+    await clock.advance(30_000)
+    release()
+    await tool
+    const question = $.tool.call({ tool: 'AskUserQuestion', questions: [] } as unknown as Parameters<typeof $.tool.call>[0])
+    await clock.advance(5 * 60_000)
+    release()
+    await question
+    expect(linesOf(env, WORK_FILE)).toHaveLength(1)
+    expect(linesOf(env, WORK_FILE)[0]).toMatchObject({ type: 'claude', session: 's1', project: 'beispiel/shop' })
+    expect(workRanges(env)).toEqual([[[at(15, 10, 0), at(15, 10, 0) + 50_000]]])
+  })
+
+  test('a tool that runs past 15 minutes counts 15 minutes and is then forgotten', { timeoutMs: 30_000 }, async ($, on) => {
+    const env = engine(on)
+    const release = beneath(on)
+    const clock = mock.clock(on, { now: at(15, 10, 0) })
+    await $.session.start(startOf('desktop'))
+    const tool = $.tool.call({ tool: 'Bash', command: 'sleep 1200' })
+    await clock.advance(17 * 60_000)
+    release()
+    await tool
+    await clock.advance(2 * 60_000)
+    const counted = workRanges(env).flat().reduce((sum, [start, end]) => sum + end - start, 0)
+    expect(counted).toBe(15 * 60_000)
+    expect(linesOf(env, WORK_FILE)).toHaveLength(15)
+  })
+
+  test('a turn end writes the work at once', async ($, on) => {
+    const env = engine(on)
+    const release = beneath(on)
+    const clock = mock.clock(on, { now: at(15, 10, 0) })
+    await $.session.start(startOf('desktop'))
+    await $.turn.start(TURN_START)
+    const step = drain($.turn.step(STEP))
+    await clock.advance(10_000)
+    release()
+    await step
+    await $.turn.complete(TURN_DONE)
+    expect(workRanges(env)).toEqual([[[at(15, 10, 0), at(15, 10, 0) + 10_000]]])
+  })
+
+  test('the tool result passes through unchanged', async ($, on) => {
+    engine(on)
+    const release = beneath(on)
+    const clock = mock.clock(on, { now: at(15, 10, 0) })
+    await $.session.start(startOf('desktop'))
+    const tool = $.tool.call({ tool: 'Bash', command: 'ls' })
+    await clock.advance(1_000)
+    release()
+    expect((await tool).result).toEqual({ marker: 42 })
+  })
+
+  test('a failing tool still ends its work', async ($, on) => {
+    const env = engine(on)
+    let fail = () => {}
+    on('tool.call', async () => {
+      await new Promise<void>(resolve => {
+        fail = resolve
+      })
+      throw new Error('tool broke')
+    })
+    const clock = mock.clock(on, { now: at(15, 10, 0) })
+    await $.session.start(startOf('desktop'))
+    const tool = $.tool.call({ tool: 'Bash', command: 'ls' }).catch(() => undefined)
+    await clock.advance(30_000)
+    fail()
+    await tool
+    await clock.advance(3 * 60_000)
+    expect(workRanges(env)).toEqual([[[at(15, 10, 0), at(15, 10, 0) + 30_000]]])
+  })
+
+  test('a disk that cannot be written does not stop the step or the turn', async ($, on) => {
+    const env = engine(on)
+    const release = beneath(on)
+    const clock = mock.clock(on, { now: at(15, 10, 0) })
+    await $.session.start(startOf('desktop'))
+    env.writeGate = Promise.reject(new Error('disk full'))
+    env.writeGate.catch(() => undefined)
+    await $.turn.start(TURN_START)
+    const step = drain($.turn.step(STEP))
+    await clock.advance(70_000)
+    release()
+    expect((await step).stopReason).toBe('end_turn')
+    expect(await $.turn.complete(TURN_DONE)).toEqual({ text: 'done' })
+  })
+})
+
 for (const surface of SURFACES) {
   describe(`band on ${surface}`, () => {
     test('band shows project and session time of today', IDLE_5, async ($, on) => {
