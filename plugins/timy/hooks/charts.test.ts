@@ -154,8 +154,8 @@ describe('barsSvg', () => {
     { project: 'beispiel/blog', name: 'blog' },
   ])
   const days = [
-    { labels: ['Mo 12.10.', 'Mo 12.', '12'], isMonday: true, target: 6 * HOUR, byProject: [['beispiel/shop', 2 * HOUR], ['beispiel/blog', 3 * HOUR]] as const },
-    { labels: ['Di 13.10.', 'Di 13.', '13'], isMonday: false, target: 6 * HOUR, byProject: [] },
+    { labels: ['Mo 12.10.', 'Mo 12.', '12'], isMonday: true, target: 6 * HOUR, active: 5 * HOUR, byProject: [['beispiel/shop', 2 * HOUR], ['beispiel/blog', 3 * HOUR]] as const },
+    { labels: ['Di 13.10.', 'Di 13.', '13'], isMonday: false, target: 6 * HOUR, active: 0, byProject: [] },
   ]
 
   test('stacks projects per day in the timeline colours', () => {
@@ -168,18 +168,29 @@ describe('barsSvg', () => {
     expect(barsSvg({ days, rows, width: 600 }).match(/<title>Soll 6:00<\/title>/g)).toHaveLength(2)
   })
 
+  test('parallel time counts once in the bar and its total', () => {
+    const day = { labels: ['Di 13.10.', 'Di 13.', '13'], isMonday: false, target: 6 * HOUR }
+    const parallel = { ...day, active: 4 * HOUR, byProject: [['beispiel/shop', 3 * HOUR], ['beispiel/blog', 2 * HOUR]] as const }
+    const single = { ...day, active: 4 * HOUR, byProject: [['beispiel/shop', 4 * HOUR]] as const }
+    const height = (svg: string) => [...svg.matchAll(/<rect [^>]*height="([\d.]+)"/g)].reduce((sum, m) => sum + Number(m[1]), 0)
+    const svg = barsSvg({ days: [parallel], rows, width: 600 })
+    expect(svg).toContain('>4:00</text>')
+    expect(svg).toContain('shop 3:00</title>')
+    expect(Math.round(height(svg))).toBe(Math.round(height(barsSvg({ days: [single], rows, width: 600 }))))
+  })
+
   test('writes the day total above a wide bar', () => {
     expect(barsSvg({ days, rows, width: 600 })).toContain('>5:00</text>')
   })
 
   test('a crowded month labels only every few days', () => {
-    const month = Array.from({ length: 31 }, (_, i) => new Date(2026, 9, i + 1)).map(d => ({ labels: dayLabels(d.getTime()), isMonday: d.getDay() === 1, target: 0, byProject: [] }))
+    const month = Array.from({ length: 31 }, (_, i) => new Date(2026, 9, i + 1)).map(d => ({ labels: dayLabels(d.getTime()), isMonday: d.getDay() === 1, target: 0, active: 0, byProject: [] }))
     const svg = barsSvg({ days: month, rows, width: 480 })
     expect([...svg.matchAll(/y="194" text-anchor="middle"[^>]*>(\d+)<\/text>/g)].map(m => m[1])).toEqual(['05', '12', '19', '26'])
   })
 
   test('the day total sits on the bar, not on a far higher target', () => {
-    const low = [{ labels: ['Mo 12.10.', 'Mo 12.', '12'], isMonday: true, target: 8 * HOUR, byProject: [['beispiel/shop', 2 * HOUR]] as const }]
+    const low = [{ labels: ['Mo 12.10.', 'Mo 12.', '12'], isMonday: true, target: 8 * HOUR, active: 2 * HOUR, byProject: [['beispiel/shop', 2 * HOUR]] as const }]
     const svg = barsSvg({ days: low, rows, width: 600 })
     const totalY = Number(svg.match(/<text x="[\d.]+" y="([\d.]+)"[^>]*>2:00<\/text>/)?.[1])
     const targetY = Number(svg.match(/<line x1="[\d.]+" y1="([\d.]+)"[^>]*stroke-dasharray/)?.[1])
@@ -187,7 +198,7 @@ describe('barsSvg', () => {
   })
 
   test('a narrower week slot drops the month, then the weekday', () => {
-    const week = [19, 20, 21, 22, 23].map(d => ({ labels: dayLabels(new Date(2026, 9, d).getTime()), isMonday: d === 19, target: 0, byProject: [] }))
+    const week = [19, 20, 21, 22, 23].map(d => ({ labels: dayLabels(new Date(2026, 9, d).getTime()), isMonday: d === 19, target: 0, active: 0, byProject: [] }))
     expect(barsSvg({ days: week, rows, width: 36 + 5 * 90 })).toContain('>Mo 19.10.</text>')
     expect(barsSvg({ days: week, rows, width: 36 + 5 * 60 })).toContain('>Mo 19.</text>')
     const narrow = barsSvg({ days: week, rows, width: 36 + 5 * 40 })

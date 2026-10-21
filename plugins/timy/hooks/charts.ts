@@ -150,13 +150,13 @@ export const timelineSvg = ({
   return chart(width, height, parts)
 }
 
-export type ChartDay = { labels: readonly string[]; isMonday: boolean; target: number; byProject: readonly (readonly [string, number])[] }
+export type ChartDay = { labels: readonly string[]; isMonday: boolean; target: number; active: number; byProject: readonly (readonly [string, number])[] }
 
 export const barsSvg = ({ days, rows, width }: { days: readonly ChartDay[]; rows: readonly ChartRow[]; width: number }): Chart => {
   const height = 200
   const top = 24
   const bottom = height - 22
-  const totals = days.map(day => day.byProject.reduce((sum, [, ms]) => sum + ms, 0))
+  const totals = days.map(day => day.active)
   const maxHours = Math.max(1, Math.ceil(Math.max(...totals, ...days.map(day => day.target), 0) / HOUR))
   const y = (ms: number) => bottom - (ms / (maxHours * HOUR)) * (bottom - top)
   const left = 28
@@ -175,15 +175,17 @@ export const barsSvg = ({ days, rows, width }: { days: readonly ChartDay[]; rows
   days.forEach((day, i) => {
     const cx = left + slot * i + slot / 2
     const x0 = cx - barWidth / 2
+    const stacked = day.byProject.reduce((sum, [, ms]) => sum + ms, 0)
+    const scale = stacked > 0 ? day.active / stacked : 0
     let reach = 0
     for (const [project, ms] of [...day.byProject].sort((a, b) => (order.get(a[0]) ?? 99) - (order.get(b[0]) ?? 99))) {
       if (ms <= 0) continue
       const name = escapeXml(rows.find(row => row.project === project)?.name ?? shortProject(project))
       parts.push(
-        `<rect x="${x0}" y="${y(reach + ms)}" width="${barWidth}" height="${y(reach) - y(reach + ms)}" fill="${colors.get(project) ?? MUTED}">` +
+        `<rect x="${x0}" y="${y(reach + ms * scale)}" width="${barWidth}" height="${y(reach) - y(reach + ms * scale)}" fill="${colors.get(project) ?? MUTED}">` +
           `<title>${escapeXml(day.labels[0]!)} · ${name} ${hm(ms)}</title></rect>`,
       )
-      reach += ms
+      reach += ms * scale
     }
     if (day.target > 0) {
       parts.push(
