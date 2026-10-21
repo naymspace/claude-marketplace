@@ -162,6 +162,7 @@ export const barsSvg = ({ days, rows, width }: { days: readonly ChartDay[]; rows
   const left = 28
   const slot = (width - left - 8) / Math.max(1, days.length)
   const barWidth = Math.max(4, Math.min(40, slot * 0.6))
+  const overhang = Math.min(5, (slot - barWidth) / 2)
   const order = new Map(rows.map((row, i) => [row.project, i]))
   const colors = new Map(rows.map(row => [row.project, row.color]))
   const step = Math.max(1, Math.ceil(maxHours / 4))
@@ -189,7 +190,7 @@ export const barsSvg = ({ days, rows, width }: { days: readonly ChartDay[]; rows
     }
     if (day.target > 0) {
       parts.push(
-        `<line x1="${x0 - 5}" y1="${y(day.target)}" x2="${x0 + barWidth + 5}" y2="${y(day.target)}" stroke="${NOW}" stroke-width="2" stroke-dasharray="3 2">` +
+        `<line x1="${x0 - overhang}" y1="${y(day.target)}" x2="${x0 + barWidth + overhang}" y2="${y(day.target)}" stroke="${NOW}" stroke-width="2" stroke-dasharray="3 2">` +
           `<title>Soll ${hm(day.target)}</title></line>`,
       )
     }

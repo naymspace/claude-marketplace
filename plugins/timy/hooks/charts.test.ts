@@ -196,6 +196,13 @@ describe('barsSvg', () => {
     expect([...svg.matchAll(/y="194" text-anchor="middle"[^>]*>(\d+)<\/text>/g)].map(m => m[1])).toEqual(['05', '12', '19', '26'])
   })
 
+  test('target lines of neighbouring days do not overlap in a crowded month', () => {
+    const month = Array.from({ length: 31 }, (_, i) => new Date(2026, 9, i + 1)).map(d => ({ labels: dayLabels(d.getTime()), isMonday: d.getDay() === 1, target: 8 * HOUR, active: 0, byProject: [] }))
+    const lines = [...barsSvg({ days: month, rows, width: 480 }).matchAll(/<line x1="([\d.]+)" y1="[\d.]+" x2="([\d.]+)"[^>]*stroke-dasharray/g)].map(m => [Number(m[1]), Number(m[2])])
+    expect(lines).toHaveLength(31)
+    expect(lines.slice(1).every(([x1], i) => x1 > lines[i]![1]! - 0.01)).toBe(true)
+  })
+
   test('the day total sits on the bar, not on a far higher target', () => {
     const low = [{ labels: ['Mo 12.10.', 'Mo 12.', '12'], isMonday: true, target: 8 * HOUR, active: 2 * HOUR, byProject: [['beispiel/shop', 2 * HOUR]] as const }]
     const svg = barsSvg({ days: low, rows, width: 600 })
