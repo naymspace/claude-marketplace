@@ -259,12 +259,7 @@ export const renderPane = (p: PaneInput) => {
   const active = sumOf(report.days.map(day => day.active))
   const claude = p.tab === 'heute' ? unionLength(report.spans, 'claude', report.from, report.to) : null
   const overlap = overlapOf(report.summary, active, claude)
-  const summary = (
-    <Box flexDirection="column">
-      {table(p.ui, COLUMNS, summaryRows(report.summary, folding(p, Svg !== null), dots, overlap), layout.columnWidth)}
-      {glossary(p.ui)}
-    </Box>
-  )
+  const summary = table(p.ui, COLUMNS, summaryRows(report.summary, folding(p, Svg !== null), dots, overlap), layout.columnWidth)
   const hasPerDay = Svg === null && p.tab !== 'heute' && report.days.some(day => day.active > 0)
   return (
     <Box flexDirection="column">
@@ -276,6 +271,7 @@ export const renderPane = (p: PaneInput) => {
           {Svg !== null ? <Box marginBottom={1}>{chart(p, Svg, report, rows)}</Box> : null}
         </Box>
         {pair(p.ui, layout, summary, hasPerDay ? perDay(p, layout, report) : null)}
+        {glossary(p.ui)}
       </Box>
       {p.theirs}
     </Box>
