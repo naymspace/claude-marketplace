@@ -12,7 +12,7 @@ Above the prompt there is a band with the project, today's time and the day agai
 
 ## How it counts
 
-timy notes a few events per session: when you open it, type, send something and when Claude is done, and once a minute when Claude worked. Two times come out of that. `Aktiv` keeps counting for up to `idle_minutes` after you open the session, type or send something; Claude working on its own does not keep it going. Closing the session stops it at once. `Claude` counts while a model request or a tool runs, subagents included, at most 15 minutes per run; a question to you or a plan waiting for your approval does not count, a turn that just stays open does not either. timy also notes how long you type in the prompt, but does not show it.
+timy notes a few events per session: when you open it, type, send something and when Claude is done, and once a minute when Claude worked. Two times come out of that. `Aktiv` keeps counting for up to `idle_minutes` after you open the session, type or send something; Claude working on its own does not keep it going. Closing the session stops it at once. `Claude` counts while a model request or a tool runs, subagents included, at most 15 minutes per run. A tool waiting for your permission counts too, because timy cannot tell the wait apart from the run. A question to you or a plan waiting for your approval does not count, a turn that just stays open does not either. timy also notes how long you type in the prompt, but does not show it.
 
 The count is rough and covers only what happens inside Claude. Meetings, calls and other apps are missing, so it does not replace booking your time.
 

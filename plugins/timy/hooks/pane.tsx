@@ -47,7 +47,7 @@ const PAGE_KEY = { heute: 'day', woche: 'week', monat: 'month' } as const
 const TERM_WIDTH = 8
 const NOTES = [
   ['Aktiv', 'Zeit, in der du in einer Session arbeitest. Lesen und Pausen zählen bis zu ein paar Minuten nach deiner letzten Eingabe mit.'],
-  ['Claude', 'Zeit, in der Claude rechnet oder Tools ausführt, auch in Subagents.'],
+  ['Claude', 'Zeit, in der Claude rechnet oder Tools ausführt, auch in Subagents. Wartet ein Tool auf deine Freigabe, zählt das mit.'],
   [
     'Hinweis',
     'timy misst nur, was in Claude passiert. Meetings, Calls und andere Apps fehlen. Parallele Sessions zählen in der Summe mehrfach. Ersetzt nicht das Buchen deiner Zeiten.',
