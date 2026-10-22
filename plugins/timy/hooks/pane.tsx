@@ -218,13 +218,14 @@ const perDay = ({ ui }: PaneInput, layout: Layout, report: Report) => {
   const hasTarget = report.days.some(day => day.target > 0)
   const targets = new Set(report.days.filter(day => day.active > 0).map(day => day.target))
   const sameTarget = targets.size === 1 && hasTarget ? [...targets][0]! : null
+  const isTargetShown = sameTarget === null && hasTarget
   const rows = report.days
     .filter(day => day.active > 0)
     .map(
       (day): Row => ({
         key: `day-${day.labels[0]}`,
         name: day.labels[0]!,
-        values: sameTarget === null ? [hm(day.active), hm(day.target)] : [hm(day.active)],
+        values: isTargetShown ? [hm(day.active), hm(day.target)] : [hm(day.active)],
         style: 'plain',
         ...(day.target > 0 ? { bar: { actual: day.active, planned: day.target } } : {}),
       }),
@@ -235,7 +236,7 @@ const perDay = ({ ui }: PaneInput, layout: Layout, report: Report) => {
         <Text bold>Pro Tag</Text>
         {sameTarget === null ? null : <Text dimColor>{`Soll ${hm(sameTarget)}`}</Text>}
       </Box>
-      {table(ui, dayColumns(sameTarget === null && hasTarget), rows, layout.columnWidth, 1)}
+      {table(ui, dayColumns(isTargetShown), rows, layout.columnWidth, 1)}
     </Box>
   )
 }

@@ -824,6 +824,16 @@ for (const surface of SURFACES) {
       expect(cells('Mo 12.10.')).toBe(cells('Summe'))
     })
 
+    test('per day without a target shows only the active time', IDLE_5, async ($, on) => {
+      engine(on, reportFiles)
+      const clock = mock.clock(on, { now: at(15, 18, 0) })
+      await $.session.start(startOf(surface))
+      await clock.settle()
+      const ui = await openZeit($, surface)
+      await ui.press({ key: 'tab-woche' })
+      expect(await textsOf(ui)).toContain('Mo 12.10. 0:30')
+    })
+
     test('per day shows the target per row when it differs', { options: { idle_minutes: 5, hours_per_weekday: '6,8,8,8,8' } }, async ($, on) => {
       engine(on, reportFiles)
       const clock = mock.clock(on, { now: at(15, 18, 0) })
