@@ -559,7 +559,7 @@ for (const surface of SURFACES) {
       expect(texts.some(t => t.includes('#12 Login-Seite'))).toBe(false)
     })
 
-    test('band shows today against the day target', { options: { idle_minutes: 5, hours_per_weekday: '6,6,6,6,6' } }, async ($, on) => {
+    test('band shows today against the day target', { options: { ...IDLE_5.options, hours_per_weekday: '6,6,6,6,6' } }, async ($, on) => {
       engine(on, todayFiles)
       const clock = mock.clock(on, { now: at(15, 9, 20) })
       await $.session.start(startOf(surface))
@@ -579,7 +579,7 @@ for (const surface of SURFACES) {
       expect(await textsOf(ui)).toContain('shop · heute 1:25 · Session 1:25:00 ▾')
     })
 
-    test('a medium band keeps the day time and drops its bar', { options: { idle_minutes: 5, hours_per_weekday: '6,6,6,6,6' } }, async ($, on) => {
+    test('a medium band keeps the day time and drops its bar', { options: { ...IDLE_5.options, hours_per_weekday: '6,6,6,6,6' } }, async ($, on) => {
       engine(on, todayFiles)
       const clock = mock.clock(on, { now: at(15, 9, 20) })
       await $.session.start(startOf(surface))
@@ -626,7 +626,7 @@ for (const surface of SURFACES) {
       expect(await textsOf(ui)).toContain('shop · heute 0:33 · Session 0:20:00 ▾')
     })
 
-    test('a weekday without target shows the day total alone', { options: { idle_minutes: 5, hours_per_weekday: '6,6,6' } }, async ($, on) => {
+    test('a weekday without target shows the day total alone', { options: { ...IDLE_5.options, hours_per_weekday: '6,6,6' } }, async ($, on) => {
       engine(on, todayFiles)
       const clock = mock.clock(on, { now: at(15, 9, 20) })
       await $.session.start(startOf(surface))
@@ -780,7 +780,7 @@ for (const surface of SURFACES) {
       expect((await textsOf(ui)).some(t => t.startsWith('shop 0:20 '))).toBe(true)
     })
 
-    test('week tab sums the days of the week', { options: { idle_minutes: 5, hours_per_weekday: '8,8,8,8,8' } }, async ($, on) => {
+    test('week tab sums the days of the week', { options: { ...IDLE_5.options, hours_per_weekday: '8,8,8,8,8' } }, async ($, on) => {
       engine(on, reportFiles)
       const clock = mock.clock(on, { now: at(15, 18, 0) })
       await $.session.start(startOf(surface))
@@ -794,7 +794,7 @@ for (const surface of SURFACES) {
       expect(texts).toContain('Do 15.10. 2:30')
     })
 
-    test('per day shows the target per row when it differs', { options: { idle_minutes: 5, hours_per_weekday: '6,8,8,8,8' } }, async ($, on) => {
+    test('per day shows the target per row when it differs', { options: { ...IDLE_5.options, hours_per_weekday: '6,8,8,8,8' } }, async ($, on) => {
       engine(on, reportFiles)
       const clock = mock.clock(on, { now: at(15, 18, 0) })
       await $.session.start(startOf(surface))
@@ -966,7 +966,7 @@ const svgsOf = async (ui: { findAll: (q: { type: string }) => Promise<Found[]> }
   (await ui.findAll({ type: 'Svg' })).map(svg => svg.props as { source: string; alt: string; width: number; isInteractive?: boolean })
 
 describe('/timy charts', () => {
-  test('today on desktop opens as a timeline with tiles and a colour legend', { options: { idle_minutes: 5, hours_per_weekday: '8,8,8,8,8' } }, async ($, on) => {
+  test('today on desktop opens as a timeline with tiles and a colour legend', { options: { ...IDLE_5.options, hours_per_weekday: '8,8,8,8,8' } }, async ($, on) => {
     engine(on, reportFiles)
     const clock = mock.clock(on, { now: at(15, 18, 0) })
     await $.session.start(startOf('desktop'))
@@ -1025,7 +1025,7 @@ describe('/timy charts', () => {
     expect((await textsOf(ui)).some(t => /^Claude \d+:\d\d · parallel \d+:\d\d$/.test(t))).toBe(true)
   })
 
-  test('week on desktop shows one stacked bar per day with its target', { options: { idle_minutes: 5, hours_per_weekday: '8,8,8,8,8' } }, async ($, on) => {
+  test('week on desktop shows one stacked bar per day with its target', { options: { ...IDLE_5.options, hours_per_weekday: '8,8,8,8,8' } }, async ($, on) => {
     engine(on, reportFiles)
     const clock = mock.clock(on, { now: at(15, 18, 0) })
     await $.session.start(startOf('desktop'))
