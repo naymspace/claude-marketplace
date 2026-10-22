@@ -44,6 +44,12 @@ const PX_PER_COLUMN = 8
 const SPLIT_MIN_WIDTH = 110
 const SPLIT_GAP = 3
 const PAGE_KEY = { heute: 'day', woche: 'week', monat: 'month' } as const
+const TERM_WIDTH = 8
+const GLOSSARY = [
+  ['Aktiv', 'du in einer offenen Session: tippen, lesen, kurz warten'],
+  ['Claude', 'rechnet oder führt Tools aus, auch im Hintergrund'],
+  ['Grob', 'nur was in Claude passiert, ohne Meetings, Calls, andere Apps. Kein Ersatz für mite oder MOCO.'],
+] as const
 
 const sumOf = (values: Iterable<number>) => [...values].reduce((sum, ms) => sum + ms, 0)
 
@@ -178,6 +184,21 @@ const chart = ({ ui, tab, width }: PaneInput, Svg: SvgElement, report: Report, r
   )
 }
 
+const glossary = ({ Box, Text }: Ui) => (
+  <Box flexDirection="column" marginTop={1}>
+    {GLOSSARY.map(([term, text]) => (
+      <Box key={`glossary-${term}`} flexDirection="row">
+        <Box width={TERM_WIDTH} flexShrink={0}>
+          <Text dimColor>{term}</Text>
+        </Box>
+        <Box flexShrink={1}>
+          <Text dimColor>{text}</Text>
+        </Box>
+      </Box>
+    ))}
+  </Box>
+)
+
 const folding = (p: PaneInput, isGrafik: boolean): Folding => {
   if (isGrafik) return allOpen(false)
   if (p.tab === 'heute') return allOpen(true)
@@ -232,7 +253,12 @@ export const renderPane = (p: PaneInput) => {
   const active = sumOf(report.days.map(day => day.active))
   const claude = p.tab === 'heute' ? unionLength(report.spans, 'claude', report.from, report.to) : null
   const overlap = overlapOf(report.summary, active, claude)
-  const summary = table(p.ui, COLUMNS, summaryRows(report.summary, folding(p, Svg !== null), dots, overlap), layout.columnWidth)
+  const summary = (
+    <Box flexDirection="column">
+      {table(p.ui, COLUMNS, summaryRows(report.summary, folding(p, Svg !== null), dots, overlap), layout.columnWidth)}
+      {glossary(p.ui)}
+    </Box>
+  )
   const hasPerDay = Svg === null && p.tab !== 'heute' && report.days.some(day => day.active > 0)
   return (
     <Box flexDirection="column">

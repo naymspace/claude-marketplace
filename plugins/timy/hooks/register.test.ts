@@ -748,6 +748,16 @@ for (const surface of SURFACES) {
       expect(texts.some(t => t.includes('beispiel/'))).toBe(false)
     })
 
+    test('the pane explains its columns and how rough it counts', IDLE_5, async ($, on) => {
+      engine(on, reportFiles)
+      const clock = mock.clock(on, { now: at(15, 18, 0) })
+      await $.session.start(startOf(surface))
+      await clock.settle()
+      const texts = await textsOf(await openZeit($, surface))
+      expect(texts.some(t => t.startsWith('du in einer offenen Session'))).toBe(true)
+      expect(texts.some(t => t.includes('ohne Meetings'))).toBe(true)
+    })
+
     test('a session row keeps its time under the selected column', async ($, on) => {
       engine(on, reportFiles)
       const clock = mock.clock(on, { now: at(15, 18, 0) })
