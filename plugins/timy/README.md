@@ -2,7 +2,7 @@
 
 timy shows you how much time you spend per project in your Claude sessions. It is meant for yourself, not as a timesheet and not for control: the data stays on your machine and timy sends nothing anywhere.
 
-Above the prompt there is a band with the project, today's time and the day against your target. Click it to see today per project, `⤢` opens the pane. `/timy` opens the pane too, with today, the week and the month (keys `1`, `2`, `3`). In the desktop app the pane switches between a chart and a table (`g`, `t`), the terminal shows the table. A few lines at the foot of the pane say what the two times mean. The interface is in German, the pictures show demo data.
+Above the prompt there is a band with the project, today's time and the day against your target. Click it to see today per project, `⤢` opens the pane. `/timy` opens the pane too, with today, the week and the month (keys `1`, `2`, `3`). In the desktop app the pane switches between a chart and a table (`g`, `t`), the terminal shows the table. A few lines at the foot of the pane say what the two times mean. The interface is in German, the pictures show demo data plus the session that took them.
 
 ![The band above the prompt](docs/band.png)
 
