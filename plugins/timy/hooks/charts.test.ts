@@ -81,12 +81,11 @@ describe('timelineSvg', () => {
 
   test('joins Claude stretches less than a minute apart and keeps their worked time', () => {
     const work = [
-      span('claude', 'a', at(9, 20), at(9, 25)),
-      span('claude', 'a', at(9, 25) + 30_000, at(9, 30)),
+      ...Array.from({ length: 10 }, (_, i) => span('claude', 'a', at(9, 20 + i), at(9, 20 + i) + 30_000)),
       span('claude', 'a', at(9, 32), at(9, 40)),
     ]
     const joined = timelineSvg({ spans: work, rows, from: at(4, 0), to: at(4, 0) + 24 * HOUR, now: at(11, 45), width: 600 })
-    expect(joined).toContain('<title>shop · Claude 09:20–09:30 (0:10)</title>')
+    expect(joined).toContain('<title>shop · Claude 09:20–09:29 (0:05)</title>')
     expect(joined).toContain('<title>shop · Claude 09:32–09:40 (0:08)</title>')
     expect(joined.match(/· Claude /g)).toHaveLength(2)
   })

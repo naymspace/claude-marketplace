@@ -49,7 +49,6 @@ export const sessionSpans = (events: readonly TimyEvent[], idleMs: number, now: 
 
   const work = sorted.flatMap(event => (event.type === 'claude' ? (event.ranges ?? []) : []))
   for (const [start, end] of merge(work)) add('claude', start, end)
-  const hasWork = sorted.some(event => event.type === 'claude')
 
   let turnStart: number | null = null
   let attached = false
@@ -62,7 +61,7 @@ export const sessionSpans = (events: readonly TimyEvent[], idleMs: number, now: 
   }
 
   for (const event of sorted) {
-    if (event.type === 'turn-start' && turnStart === null && !hasWork) turnStart = event.t
+    if (event.type === 'turn-start' && turnStart === null && work.length === 0) turnStart = event.t
     if (event.type === 'turn-end' && turnStart !== null) {
       add('claude', turnStart, Math.min(event.t, turnStart + OPEN_CAP_MS))
       turnStart = null

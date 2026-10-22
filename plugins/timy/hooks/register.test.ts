@@ -357,7 +357,7 @@ const drain = async <C, R>(stream: AsyncGenerator<C, R>) => {
 const workRanges = (env: Env) => linesOf(env, WORK_FILE).map(l => l.ranges as [number, number][])
 
 describe('Claude work', () => {
-  test('model requests and tool runs are written once a minute, a question to the person is not', async ($, on) => {
+  test('model requests and tool runs, subagents included, are written once a minute, a question to the person is not', async ($, on) => {
     const env = engine(on)
     const release = beneath(on)
     const clock = mock.clock(on, { now: at(15, 10, 0) })
@@ -370,13 +370,17 @@ describe('Claude work', () => {
     await clock.advance(30_000)
     release()
     await tool
+    const subagent = drain($.turn.step({ ...STEP, agentId: 'sub-1' }))
+    await clock.advance(5_000)
+    release()
+    await subagent
     const question = $.tool.call({ tool: 'AskUserQuestion', questions: [] } as unknown as Parameters<typeof $.tool.call>[0])
     await clock.advance(5 * 60_000)
     release()
     await question
     expect(linesOf(env, WORK_FILE)).toHaveLength(1)
     expect(linesOf(env, WORK_FILE)[0]).toMatchObject({ type: 'claude', session: 's1', project: 'beispiel/shop' })
-    expect(workRanges(env)).toEqual([[[at(15, 10, 0), at(15, 10, 0) + 50_000]]])
+    expect(workRanges(env)).toEqual([[[at(15, 10, 0), at(15, 10, 0) + 55_000]]])
   })
 
   test('a tool that runs past 15 minutes counts 15 minutes and is then forgotten', { timeoutMs: 30_000 }, async ($, on) => {
@@ -384,14 +388,15 @@ describe('Claude work', () => {
     const release = beneath(on)
     const clock = mock.clock(on, { now: at(15, 10, 0) })
     await $.session.start(startOf('desktop'))
+    await clock.advance(30_000)
     const tool = $.tool.call({ tool: 'Bash', command: 'sleep 1200' })
-    await clock.advance(17 * 60_000)
+    await clock.advance(15 * 60_000 + 45_000)
     release()
     await tool
     await clock.advance(2 * 60_000)
     const counted = workRanges(env).flat().reduce((sum, [start, end]) => sum + end - start, 0)
     expect(counted).toBe(15 * 60_000)
-    expect(linesOf(env, WORK_FILE)).toHaveLength(15)
+    expect(linesOf(env, WORK_FILE)).toHaveLength(16)
   })
 
   test('a turn end writes the work at once', async ($, on) => {
@@ -558,7 +563,7 @@ for (const surface of SURFACES) {
       expect(texts.some(t => t.includes('#12 Login-Seite'))).toBe(false)
     })
 
-    test('band shows today against the day target', { options: { idle_minutes: 5, hours_per_weekday: '6,6,6,6,6' } }, async ($, on) => {
+    test('band shows today against the day target', { options: { ...IDLE_5.options, hours_per_weekday: '6,6,6,6,6' } }, async ($, on) => {
       engine(on, todayFiles)
       const clock = mock.clock(on, { now: at(15, 9, 20) })
       await $.session.start(startOf(surface))
@@ -578,7 +583,7 @@ for (const surface of SURFACES) {
       expect(await textsOf(ui)).toContain('shop · heute 1:25 · Session 1:25:00 ▾')
     })
 
-    test('a medium band keeps the day time and drops its bar', { options: { idle_minutes: 5, hours_per_weekday: '6,6,6,6,6' } }, async ($, on) => {
+    test('a medium band keeps the day time and drops its bar', { options: { ...IDLE_5.options, hours_per_weekday: '6,6,6,6,6' } }, async ($, on) => {
       engine(on, todayFiles)
       const clock = mock.clock(on, { now: at(15, 9, 20) })
       await $.session.start(startOf(surface))
@@ -625,7 +630,7 @@ for (const surface of SURFACES) {
       expect(await textsOf(ui)).toContain('shop · heute 0:33 · Session 0:20:00 ▾')
     })
 
-    test('a weekday without target shows the day total alone', { options: { idle_minutes: 5, hours_per_weekday: '6,6,6' } }, async ($, on) => {
+    test('a weekday without target shows the day total alone', { options: { ...IDLE_5.options, hours_per_weekday: '6,6,6' } }, async ($, on) => {
       engine(on, todayFiles)
       const clock = mock.clock(on, { now: at(15, 9, 20) })
       await $.session.start(startOf(surface))
@@ -797,7 +802,7 @@ for (const surface of SURFACES) {
       expect((await textsOf(ui)).some(t => t.startsWith('shop 0:20 '))).toBe(true)
     })
 
-    test('week tab sums the days of the week', { options: { idle_minutes: 5, hours_per_weekday: '8,8,8,8,8' } }, async ($, on) => {
+    test('week tab sums the days of the week', { options: { ...IDLE_5.options, hours_per_weekday: '8,8,8,8,8' } }, async ($, on) => {
       engine(on, reportFiles)
       const clock = mock.clock(on, { now: at(15, 18, 0) })
       await $.session.start(startOf(surface))
@@ -811,7 +816,7 @@ for (const surface of SURFACES) {
       expect(texts).toContain('Do 15.10. 2:30')
     })
 
-    test('per day bars follow the time against the target and keep Aktiv aligned', { options: { idle_minutes: 5, hours_per_weekday: '8,8,8,8,8' } }, async ($, on) => {
+    test('per day bars follow the time against the target and keep Aktiv aligned', { options: { ...IDLE_5.options, hours_per_weekday: '8,8,8,8,8' } }, async ($, on) => {
       engine(on, reportFiles)
       const clock = mock.clock(on, { now: at(15, 18, 0) })
       await $.session.start(startOf(surface))
@@ -834,7 +839,7 @@ for (const surface of SURFACES) {
       expect(await textsOf(ui)).toContain('Mo 12.10. 0:30')
     })
 
-    test('per day shows the target per row when it differs', { options: { idle_minutes: 5, hours_per_weekday: '6,8,8,8,8' } }, async ($, on) => {
+    test('per day shows the target per row when it differs', { options: { ...IDLE_5.options, hours_per_weekday: '6,8,8,8,8' } }, async ($, on) => {
       engine(on, reportFiles)
       const clock = mock.clock(on, { now: at(15, 18, 0) })
       await $.session.start(startOf(surface))
@@ -863,6 +868,26 @@ for (const surface of SURFACES) {
       await $.session.start(startOf(surface))
       await clock.settle()
       expect(await textsOf(await openZeit($, surface))).toContain('Claude Test 0:05 0:10')
+    })
+
+    test('today counts Claude time from the work file, not from how long the turn stayed open', IDLE_5, async ($, on) => {
+      const title = { title: 'Claude Arbeit' }
+      engine(on, {
+        ...reportFiles,
+        [`${DIR}/2026-10-15/s8.jsonl`]:
+          [
+            line('attach', at(15, 12, 0), 's8', 'beispiel/shop', title),
+            line('submit', at(15, 12, 0), 's8', 'beispiel/shop', title),
+            line('turn-start', at(15, 12, 0), 's8', 'beispiel/shop', title),
+            line('turn-end', at(15, 13, 0), 's8', 'beispiel/shop', title),
+          ].join('\n') + '\n',
+        [`${DIR}/2026-10-15/s8.claude.jsonl`]:
+          line('claude', at(15, 12, 0), 's8', 'beispiel/shop', { ...title, ranges: [[at(15, 12, 0), at(15, 12, 10)]] }) + '\n',
+      })
+      const clock = mock.clock(on, { now: at(15, 18, 0) })
+      await $.session.start(startOf(surface))
+      await clock.settle()
+      expect(await textsOf(await openZeit($, surface))).toContain('Claude Arbeit 0:05 0:10')
     })
 
     test('week tab shows projects folded and unfolds one on press', IDLE_5, async ($, on) => {
@@ -1006,7 +1031,7 @@ const svgsOf = async (ui: { findAll: (q: { type: string }) => Promise<Found[]> }
   (await ui.findAll({ type: 'Svg' })).map(svg => svg.props as { source: string; alt: string; width: number; isInteractive?: boolean })
 
 describe('/timy charts', () => {
-  test('today on desktop opens as a timeline with tiles and a colour legend', { options: { idle_minutes: 5, hours_per_weekday: '8,8,8,8,8' } }, async ($, on) => {
+  test('today on desktop opens as a timeline with tiles and a colour legend', { options: { ...IDLE_5.options, hours_per_weekday: '8,8,8,8,8' } }, async ($, on) => {
     engine(on, reportFiles)
     const clock = mock.clock(on, { now: at(15, 18, 0) })
     await $.session.start(startOf('desktop'))
@@ -1065,7 +1090,7 @@ describe('/timy charts', () => {
     expect((await textsOf(ui)).some(t => /^Claude \d+:\d\d · parallel \d+:\d\d$/.test(t))).toBe(true)
   })
 
-  test('week on desktop shows one stacked bar per day with its target', { options: { idle_minutes: 5, hours_per_weekday: '8,8,8,8,8' } }, async ($, on) => {
+  test('week on desktop shows one stacked bar per day with its target', { options: { ...IDLE_5.options, hours_per_weekday: '8,8,8,8,8' } }, async ($, on) => {
     engine(on, reportFiles)
     const clock = mock.clock(on, { now: at(15, 18, 0) })
     await $.session.start(startOf('desktop'))
