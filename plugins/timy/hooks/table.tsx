@@ -22,20 +22,16 @@ type Column = { title: string; width: number; minBody: number; isBar?: true }
 
 export const COLUMNS: Column[] = [
   { title: 'Aktiv', width: 8, minBody: 0 },
-  { title: 'Tippen', width: 8, minBody: 52 },
-  { title: 'Claude', width: 8, minBody: 44 },
+  { title: 'Claude', width: 8, minBody: 32 },
 ]
 
 const BAR_GAP = 2
 
-export const dayColumns = (hasTarget: boolean, isTargetShown: boolean): Column[] => {
-  const rest = COLUMNS[1]!.width + COLUMNS[2]!.width
-  return [
-    COLUMNS[0]!,
-    ...(isTargetShown ? [{ title: 'Soll', width: COLUMNS[1]!.width, minBody: 36 }] : []),
-    ...(hasTarget ? [{ title: '', width: isTargetShown ? rest - COLUMNS[1]!.width : rest, minBody: 52, isBar: true as const }] : []),
-  ]
-}
+export const dayColumns = (hasTarget: boolean, isTargetShown: boolean): Column[] => [
+  COLUMNS[0]!,
+  ...(isTargetShown ? [{ title: 'Soll', width: COLUMNS[1]!.width, minBody: 40 }] : []),
+  ...(hasTarget ? [{ title: '', width: COLUMNS[1]!.width, minBody: 32, isBar: true as const }] : []),
+]
 
 export const isShown = (ms: number) => hm(ms) !== '0:00'
 
@@ -64,12 +60,12 @@ export const overlapOf = (summary: Summary, selected: number, claude: number | n
 
 const overlapRows = (overlap: Overlap | null): Row[] =>
   overlap !== null && (isShown(overlap.selected) || (overlap.claude !== null && isShown(overlap.claude)))
-    ? [{ key: 'overlap', name: 'davon parallel', values: [hm(overlap.selected), '', overlap.claude === null ? '' : hm(overlap.claude)], style: 'dim', isSum: true }]
+    ? [{ key: 'overlap', name: 'davon parallel', values: [hm(overlap.selected), overlap.claude === null ? '' : hm(overlap.claude)], style: 'dim', isSum: true }]
     : []
 
 export const summaryRows = (summary: Summary, folding: Folding, dots: ReadonlyMap<string, string> = new Map(), overlap: Overlap | null = null): Row[] => [
   ...summary.rows
-    .filter(row => isShown(row.selected) || isShown(row.writing) || isShown(row.claude))
+    .filter(row => isShown(row.selected) || isShown(row.claude))
     .flatMap((row): Row[] => {
       const isOpen = folding.isOpen(row.project)
       const toggle = folding.toggle
@@ -78,18 +74,18 @@ export const summaryRows = (summary: Summary, folding: Folding, dots: ReadonlyMa
         {
           key: `row-${row.project}`,
           name: toggle ? `${isOpen ? '▾' : '▸'} ${shortProject(row.project)}` : shortProject(row.project),
-          values: [hm(row.selected), hm(row.writing), hm(row.claude)],
+          values: [hm(row.selected), hm(row.claude)],
           style: 'plain',
           ...(dot ? { dot } : {}),
           ...(toggle ? { toggle: { key: `toggle-${row.project}`, onPress: () => toggle(row.project) } } : {}),
         },
         ...(isOpen
           ? byLabel(row.sessions)
-              .filter(s => s.label && (isShown(s.selected) || isShown(s.writing) || isShown(s.claude)))
+              .filter(s => s.label && (isShown(s.selected) || isShown(s.claude)))
               .map((s): Row => ({
                 key: `session-${s.session}`,
                 name: `  ${s.label}`,
-                values: [hm(s.selected), hm(s.writing), hm(s.claude)],
+                values: [hm(s.selected), hm(s.claude)],
                 style: 'dim',
               }))
           : []),
@@ -98,7 +94,7 @@ export const summaryRows = (summary: Summary, folding: Folding, dots: ReadonlyMa
   {
     key: 'sum',
     name: 'Summe',
-    values: (['selected', 'writing', 'claude'] as const).map(kind => hm(displayedTotal(summary.rows, kind))),
+    values: (['selected', 'claude'] as const).map(kind => hm(displayedTotal(summary.rows, kind))),
     style: 'bold',
     isSum: true,
   },

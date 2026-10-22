@@ -23,6 +23,6 @@ describe('summaryRows', () => {
       },
       allOpen(true),
     )
-    expect(rows.filter(row => row.name.trim() === 'Kommentare').map(row => row.values)).toEqual([['1:05', '0:04', '0:40']])
+    expect(rows.filter(row => row.name.trim() === 'Kommentare').map(row => row.values)).toEqual([['1:05', '0:40']])
   })
 })

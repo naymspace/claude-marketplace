@@ -742,7 +742,7 @@ for (const surface of SURFACES) {
       await $.session.start(startOf(surface))
       await clock.settle()
       const texts = await textsOf(await openZeit($, surface))
-      expect(texts).toContain('Aktiv Tippen Claude')
+      expect(texts).toContain('Aktiv Claude')
       expect(texts.some(t => t.startsWith('leer'))).toBe(false)
       expect(texts.some(t => t.startsWith('feature/12-login-seite'))).toBe(false)
       expect(texts.some(t => t.includes('beispiel/'))).toBe(false)
@@ -764,10 +764,18 @@ for (const surface of SURFACES) {
       const clock = mock.clock(on, { now: at(15, 18, 0) })
       await $.session.start(startOf(surface))
       await clock.settle()
-      const texts = await textsOf(await openZeit($, surface, 36))
+      const texts = await textsOf(await openZeit($, surface, 30))
       expect(texts).toContain('Aktiv')
       expect(texts).toContain('shop 1:40')
       expect(texts).toContain('Summe 2:30')
+    })
+
+    test('a pane of 35 columns still shows the Claude column', IDLE_5, async ($, on) => {
+      engine(on, reportFiles)
+      const clock = mock.clock(on, { now: at(15, 18, 0) })
+      await $.session.start(startOf(surface))
+      await clock.settle()
+      expect(await textsOf(await openZeit($, surface, 35))).toContain('Aktiv Claude')
     })
 
     test('today tab counts the part of a session that began before 4:00', IDLE_5, async ($, on) => {
@@ -805,7 +813,7 @@ for (const surface of SURFACES) {
       expect(texts).toContain('Do 15.10. 2:30 8:00')
     })
 
-    test('today shows writing and Claude time per session', IDLE_5, async ($, on) => {
+    test('today shows active and Claude time per session', IDLE_5, async ($, on) => {
       const file = `${DIR}/2026-10-15/s9.jsonl`
       engine(on, {
         ...reportFiles,
@@ -821,7 +829,7 @@ for (const surface of SURFACES) {
       const clock = mock.clock(on, { now: at(15, 18, 0) })
       await $.session.start(startOf(surface))
       await clock.settle()
-      expect(await textsOf(await openZeit($, surface))).toContain('Claude Test 0:05 0:00 0:10')
+      expect(await textsOf(await openZeit($, surface))).toContain('Claude Test 0:05 0:10')
     })
 
     test('week tab shows projects folded and unfolds one on press', IDLE_5, async ($, on) => {
