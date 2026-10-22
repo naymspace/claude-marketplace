@@ -384,14 +384,15 @@ describe('Claude work', () => {
     const release = beneath(on)
     const clock = mock.clock(on, { now: at(15, 10, 0) })
     await $.session.start(startOf('desktop'))
+    await clock.advance(30_000)
     const tool = $.tool.call({ tool: 'Bash', command: 'sleep 1200' })
-    await clock.advance(17 * 60_000)
+    await clock.advance(15 * 60_000 + 45_000)
     release()
     await tool
     await clock.advance(2 * 60_000)
     const counted = workRanges(env).flat().reduce((sum, [start, end]) => sum + end - start, 0)
     expect(counted).toBe(15 * 60_000)
-    expect(linesOf(env, WORK_FILE)).toHaveLength(15)
+    expect(linesOf(env, WORK_FILE)).toHaveLength(16)
   })
 
   test('a turn end writes the work at once', async ($, on) => {
