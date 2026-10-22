@@ -754,7 +754,7 @@ for (const surface of SURFACES) {
       await $.session.start(startOf(surface))
       await clock.settle()
       const texts = await textsOf(await openZeit($, surface))
-      expect(texts.some(t => t.startsWith('du in einer offenen Session'))).toBe(true)
+      expect(texts.some(t => t.startsWith('du in der Session'))).toBe(true)
       expect(texts.some(t => t.includes('ohne Meetings'))).toBe(true)
     })
 
