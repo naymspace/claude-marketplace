@@ -46,7 +46,7 @@ const SPLIT_GAP = 3
 const PAGE_KEY = { heute: 'day', woche: 'week', monat: 'month' } as const
 const TERM_WIDTH = 8
 const NOTES = [
-  ['Aktiv', 'Zeit, in der du in einer Session arbeitest. Lesen und kurze Pausen zählen mit.'],
+  ['Aktiv', 'Zeit, in der du in einer Session arbeitest. Lesen und Pausen zählen bis zu ein paar Minuten nach deiner letzten Eingabe mit.'],
   ['Claude', 'Zeit, in der Claude rechnet oder Tools ausführt, auch in Subagents.'],
   [
     'Hinweis',
