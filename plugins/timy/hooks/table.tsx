@@ -1,6 +1,6 @@
 import type { EngineInterface } from 'claude-code'
 
-import { displayedTotal, fillColor, hm, planFilled, planPercent, shortProject } from './model'
+import { displayedTotal, fillColor, hm, planPercent, shortProject } from './model'
 import type { Summary } from './model'
 
 export type Ui = ReturnType<EngineInterface['ui']['resolve']>
@@ -14,24 +14,18 @@ export type Row = {
   style: 'plain' | 'dim' | 'bold'
   isSum?: true
   dot?: string
-  bar?: { actual: number; planned: number; color: BarColor }
+  bar?: { actual: number; planned: number }
   toggle?: { key: string; onPress: () => void }
 }
 
-type Column = { title: string; width: number; minBody: number; isBar?: true }
+type Column = { title: string; width: number; minBody: number }
 
 export const COLUMNS: Column[] = [
   { title: 'Aktiv', width: 8, minBody: 0 },
   { title: 'Claude', width: 8, minBody: 28 },
 ]
 
-const BAR_GAP = 2
-
-export const dayColumns = (hasTarget: boolean, isTargetShown: boolean): Column[] => [
-  COLUMNS[0]!,
-  ...(isTargetShown ? [{ title: 'Soll', width: COLUMNS[1]!.width, minBody: 40 }] : []),
-  ...(hasTarget ? [{ title: '', width: COLUMNS[1]!.width, minBody: 32, isBar: true as const }] : []),
-]
+export const dayColumns = (isTargetShown: boolean): Column[] => [COLUMNS[0]!, { ...COLUMNS[1]!, title: isTargetShown ? 'Soll' : '' }]
 
 export const isShown = (ms: number) => hm(ms) !== '0:00'
 
@@ -132,16 +126,17 @@ export const table = (ui: Ui, columns: Column[], rows: Row[], width: number, row
             {row.name}
           </Text>
         )}
+        {row.bar ? (
+          <Box flexGrow={1} paddingRight={1}>
+            {fullBar(ui, row.bar.actual, row.bar.planned)}
+          </Box>
+        ) : null}
       </Box>
       {shown.map(({ column, i }) => (
         <Box key={`${row.key}-${i}`} width={column.width} flexShrink={0} justifyContent="flex-end">
-          {column.isBar ? (
-            row.bar ? bar(ui, planFilled(row.bar.actual, row.bar.planned, column.width - BAR_GAP), column.width - BAR_GAP, row.bar.color) : null
-          ) : (
-            <Text wrap="truncate" bold={row.style === 'bold'} dimColor={row.style === 'dim'}>
-              {row.values[i] ?? ''}
-            </Text>
-          )}
+          <Text wrap="truncate" bold={row.style === 'bold'} dimColor={row.style === 'dim'}>
+            {row.values[i] ?? ''}
+          </Text>
         </Box>
       ))}
     </Box>

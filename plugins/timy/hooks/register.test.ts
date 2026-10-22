@@ -811,6 +811,19 @@ for (const surface of SURFACES) {
       expect(texts).toContain('Do 15.10. 2:30')
     })
 
+    test('per day bars follow the time against the target and keep Aktiv aligned', { options: { idle_minutes: 5, hours_per_weekday: '8,8,8,8,8' } }, async ($, on) => {
+      engine(on, reportFiles)
+      const clock = mock.clock(on, { now: at(15, 18, 0) })
+      await $.session.start(startOf(surface))
+      await clock.settle()
+      const ui = await openZeit($, surface)
+      await ui.press({ key: 'tab-woche' })
+      expect(await barsOf(ui)).toEqual(expect.arrayContaining([{ color: 'success', width: '6%' }, { color: 'success', width: '31%' }]))
+      const rows = ((await ui.findAll({ type: 'Box' })) as unknown as Found[]).filter(isTableRow)
+      const cells = (needle: string) => rows.find(r => r.children.flatMap(flat).join('').includes(needle))?.children.length
+      expect(cells('Mo 12.10.')).toBe(cells('Summe'))
+    })
+
     test('per day shows the target per row when it differs', { options: { idle_minutes: 5, hours_per_weekday: '6,8,8,8,8' } }, async ($, on) => {
       engine(on, reportFiles)
       const clock = mock.clock(on, { now: at(15, 18, 0) })

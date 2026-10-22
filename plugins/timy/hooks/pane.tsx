@@ -2,7 +2,7 @@ import type { RenderNode } from 'claude-code'
 
 import { barsSvg, colorOf, parallelRanges, timelineSvg } from './charts'
 import type { ChartDay, ChartRow, Colors } from './charts'
-import { fillColor, hm, planPercent, shortProject, unionLength } from './model'
+import { hm, planPercent, shortProject, unionLength } from './model'
 import type { Span, Summary } from './model'
 import type { Tab } from './period'
 import { COLUMNS, allOpen, dayColumns, fullBar, isShown, overlapOf, summaryRows, table } from './table'
@@ -224,7 +224,7 @@ const perDay = ({ ui }: PaneInput, layout: Layout, report: Report) => {
         name: day.labels[0]!,
         values: sameTarget === null ? [hm(day.active), hm(day.target)] : [hm(day.active)],
         style: 'plain',
-        ...(day.target > 0 ? { bar: { actual: day.active, planned: day.target, color: fillColor(day.active, day.target) } } : {}),
+        ...(day.target > 0 ? { bar: { actual: day.active, planned: day.target } } : {}),
       }),
     )
   return (
@@ -233,7 +233,7 @@ const perDay = ({ ui }: PaneInput, layout: Layout, report: Report) => {
         <Text bold>Pro Tag</Text>
         {sameTarget === null ? null : <Text dimColor>{`Soll ${hm(sameTarget)}`}</Text>}
       </Box>
-      {table(ui, dayColumns(hasTarget, sameTarget === null && hasTarget), rows, layout.columnWidth, 1)}
+      {table(ui, dayColumns(sameTarget === null && hasTarget), rows, layout.columnWidth, 1)}
     </Box>
   )
 }
