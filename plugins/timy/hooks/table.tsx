@@ -25,6 +25,8 @@ export const COLUMNS: Column[] = [
   { title: 'Claude', width: 8, minBody: 28 },
 ]
 
+const BAR_LABEL_WIDTH = 10
+
 export const dayColumns = (isTargetShown: boolean): Column[] => [COLUMNS[0]!, { ...COLUMNS[1]!, title: isTargetShown ? 'Soll' : '' }]
 
 export const isShown = (ms: number) => hm(ms) !== '0:00'
@@ -121,16 +123,20 @@ export const table = (ui: Ui, columns: Column[], rows: Row[], width: number, row
         {row.dot ? <Text color={row.dot}>●</Text> : null}
         {row.toggle ? (
           <Button key={row.toggle.key} plain label={row.name} onPress={row.toggle.onPress} />
+        ) : row.bar ? (
+          <Box flexGrow={1} flexDirection="row">
+            <Box width={BAR_LABEL_WIDTH} flexShrink={0}>
+              <Text wrap="truncate-end">{row.name}</Text>
+            </Box>
+            <Box flexGrow={1} paddingRight={1}>
+              {fullBar(ui, row.bar.actual, row.bar.planned)}
+            </Box>
+          </Box>
         ) : (
           <Text wrap="truncate-end" bold={row.style === 'bold'} dimColor={row.style === 'dim'}>
             {row.name}
           </Text>
         )}
-        {row.bar ? (
-          <Box flexGrow={1} paddingRight={1}>
-            {fullBar(ui, row.bar.actual, row.bar.planned)}
-          </Box>
-        ) : null}
       </Box>
       {shown.map(({ column, i }) => (
         <Box key={`${row.key}-${i}`} width={column.width} flexShrink={0} justifyContent="flex-end">
