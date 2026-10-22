@@ -22,7 +22,7 @@ type Column = { title: string; width: number; minBody: number; isBar?: true }
 
 export const COLUMNS: Column[] = [
   { title: 'Aktiv', width: 8, minBody: 0 },
-  { title: 'Claude', width: 8, minBody: 32 },
+  { title: 'Claude', width: 8, minBody: 28 },
 ]
 
 const BAR_GAP = 2

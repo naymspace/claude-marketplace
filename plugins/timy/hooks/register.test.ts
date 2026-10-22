@@ -774,7 +774,7 @@ for (const surface of SURFACES) {
       const clock = mock.clock(on, { now: at(15, 18, 0) })
       await $.session.start(startOf(surface))
       await clock.settle()
-      const texts = await textsOf(await openZeit($, surface, 30))
+      const texts = await textsOf(await openZeit($, surface, 26))
       expect(texts).toContain('Aktiv')
       expect(texts).toContain('shop 1:40')
       expect(texts).toContain('Summe 2:30')
