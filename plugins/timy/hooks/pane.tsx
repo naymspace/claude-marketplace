@@ -45,11 +45,14 @@ const SPLIT_MIN_WIDTH = 110
 const SPLIT_GAP = 3
 const PAGE_KEY = { heute: 'day', woche: 'week', monat: 'month' } as const
 const TERM_WIDTH = 8
-const COLUMN_NOTES = [
-  ['Aktiv', 'du in der Session, auch Lesen und kurzes Warten. Parallele Zeit zählt in der Summe mehrfach.'],
-  ['Claude', 'rechnet oder führt Tools aus, auch im Hintergrund'],
+const NOTES = [
+  ['Aktiv', 'Zeit, in der du in einer Session arbeitest. Lesen und kurze Pausen zählen mit.'],
+  ['Claude', 'Zeit, in der Claude rechnet oder Tools ausführt, auch in Subagents.'],
+  [
+    'Hinweis',
+    'timy misst nur, was in Claude passiert. Meetings, Calls und andere Apps fehlen. Parallele Sessions zählen in der Summe mehrfach. Ersetzt nicht die Buchung in mite oder MOCO.',
+  ],
 ] as const
-const ROUGH_NOTE = ['Grob', 'nur was in Claude passiert, ohne Meetings, Calls und andere Apps. Kein Ersatz für mite oder MOCO.'] as const
 
 const sumOf = (values: Iterable<number>) => [...values].reduce((sum, ms) => sum + ms, 0)
 
@@ -198,9 +201,8 @@ const note = ({ Box, Text }: Ui, [term, text]: readonly [string, string]) => (
 const glossary = (ui: Ui) => {
   const { Box } = ui
   return (
-    <Box flexDirection="column" marginTop={1} rowGap={1}>
-      <Box flexDirection="column">{COLUMN_NOTES.map(n => note(ui, n))}</Box>
-      {note(ui, ROUGH_NOTE)}
+    <Box flexDirection="column" marginTop={2} rowGap={1}>
+      {NOTES.map(n => note(ui, n))}
     </Box>
   )
 }

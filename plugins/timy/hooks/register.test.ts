@@ -754,8 +754,8 @@ for (const surface of SURFACES) {
       await $.session.start(startOf(surface))
       await clock.settle()
       const texts = await textsOf(await openZeit($, surface))
-      expect(texts.some(t => t.startsWith('du in der Session'))).toBe(true)
-      expect(texts.some(t => t.includes('ohne Meetings'))).toBe(true)
+      expect(texts.some(t => t.startsWith('Zeit, in der du in einer Session arbeitest'))).toBe(true)
+      expect(texts.some(t => t.includes('Meetings, Calls und andere Apps fehlen'))).toBe(true)
     })
 
     test('a session row keeps its time under the selected column', async ($, on) => {
