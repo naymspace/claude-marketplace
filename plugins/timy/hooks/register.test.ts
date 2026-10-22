@@ -357,7 +357,7 @@ const drain = async <C, R>(stream: AsyncGenerator<C, R>) => {
 const workRanges = (env: Env) => linesOf(env, WORK_FILE).map(l => l.ranges as [number, number][])
 
 describe('Claude work', () => {
-  test('model requests and tool runs are written once a minute, a question to the person is not', async ($, on) => {
+  test('model requests and tool runs, subagents included, are written once a minute, a question to the person is not', async ($, on) => {
     const env = engine(on)
     const release = beneath(on)
     const clock = mock.clock(on, { now: at(15, 10, 0) })
@@ -370,13 +370,17 @@ describe('Claude work', () => {
     await clock.advance(30_000)
     release()
     await tool
+    const subagent = drain($.turn.step({ ...STEP, agentId: 'sub-1' }))
+    await clock.advance(5_000)
+    release()
+    await subagent
     const question = $.tool.call({ tool: 'AskUserQuestion', questions: [] } as unknown as Parameters<typeof $.tool.call>[0])
     await clock.advance(5 * 60_000)
     release()
     await question
     expect(linesOf(env, WORK_FILE)).toHaveLength(1)
     expect(linesOf(env, WORK_FILE)[0]).toMatchObject({ type: 'claude', session: 's1', project: 'beispiel/shop' })
-    expect(workRanges(env)).toEqual([[[at(15, 10, 0), at(15, 10, 0) + 50_000]]])
+    expect(workRanges(env)).toEqual([[[at(15, 10, 0), at(15, 10, 0) + 55_000]]])
   })
 
   test('a tool that runs past 15 minutes counts 15 minutes and is then forgotten', { timeoutMs: 30_000 }, async ($, on) => {
@@ -823,6 +827,26 @@ for (const surface of SURFACES) {
       await $.session.start(startOf(surface))
       await clock.settle()
       expect(await textsOf(await openZeit($, surface))).toContain('Claude Test 0:05 0:00 0:10')
+    })
+
+    test('today counts Claude time from the work file, not from how long the turn stayed open', IDLE_5, async ($, on) => {
+      const title = { title: 'Claude Arbeit' }
+      engine(on, {
+        ...reportFiles,
+        [`${DIR}/2026-10-15/s8.jsonl`]:
+          [
+            line('attach', at(15, 12, 0), 's8', 'beispiel/shop', title),
+            line('submit', at(15, 12, 0), 's8', 'beispiel/shop', title),
+            line('turn-start', at(15, 12, 0), 's8', 'beispiel/shop', title),
+            line('turn-end', at(15, 13, 0), 's8', 'beispiel/shop', title),
+          ].join('\n') + '\n',
+        [`${DIR}/2026-10-15/s8.claude.jsonl`]:
+          line('claude', at(15, 12, 0), 's8', 'beispiel/shop', { ...title, ranges: [[at(15, 12, 0), at(15, 12, 10)]] }) + '\n',
+      })
+      const clock = mock.clock(on, { now: at(15, 18, 0) })
+      await $.session.start(startOf(surface))
+      await clock.settle()
+      expect(await textsOf(await openZeit($, surface))).toContain('Claude Arbeit 0:05 0:00 0:10')
     })
 
     test('week tab shows projects folded and unfolds one on press', IDLE_5, async ($, on) => {
