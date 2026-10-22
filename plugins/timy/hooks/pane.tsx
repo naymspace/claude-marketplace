@@ -50,7 +50,7 @@ const NOTES = [
   ['Claude', 'Zeit, in der Claude rechnet oder Tools ausführt, auch in Subagents.'],
   [
     'Hinweis',
-    'timy misst nur, was in Claude passiert. Meetings, Calls und andere Apps fehlen. Parallele Sessions zählen in der Summe mehrfach. Ersetzt nicht die Buchung in mite oder MOCO.',
+    'timy misst nur, was in Claude passiert. Meetings, Calls und andere Apps fehlen. Parallele Sessions zählen in der Summe mehrfach. Ersetzt nicht das Buchen deiner Zeiten.',
   ],
 ] as const
 
