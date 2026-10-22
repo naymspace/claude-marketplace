@@ -144,17 +144,20 @@ const endWork = async ($: EngineInterface, key: string) => {
   const end = await $.clock.now()
   const start = await started
   work.open.delete(key)
-  work.done.push([Math.max(start, work.countedTo), Math.min(end, start + WORK_CAP_MS)])
+  work.done.push([start, end])
 }
 
 const flushWork = async ($: EngineInterface) => {
   const now = await $.clock.now()
   const open = await Promise.all([...work.open].map(async ([key, started]) => [key, await started] as const))
-  const ranges = merge([...work.done, ...open.map(([, start]): Range => [Math.max(start, work.countedTo), Math.min(now, start + WORK_CAP_MS)])])
+  const counted = merge(
+    [...work.done, ...open.map(([, start]): Range => [start, now])]
+      .map(([start, end]): Range => [Math.max(start, work.countedTo), Math.min(end, start + WORK_CAP_MS)])
+      .filter(([start, end]) => end > start),
+  )
   for (const [key, start] of open) if (start + WORK_CAP_MS <= now) work.open.delete(key)
   work.done = []
   work.countedTo = now
-  const counted = ranges.filter(([start, end]) => end > start)
   const ctx = recording.ctx
   if (ctx === null || counted.length === 0) return
   const { session, project, branch, title } = ctx
