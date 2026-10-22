@@ -32,6 +32,8 @@ Beside it `<session>.claude.jsonl` holds at most one line per minute with the st
 {"t":"2026-10-15T09:25:03.000Z","type":"claude","project":"firma/shop","session":"3f2a9c1e-5b7d-4e8a-9c21-6d0f4b8a7e13","ranges":[[1792056303000,1792056341000]]}
 ```
 
+The session file keeps its turn start and end lines: they carry the session title, and for a session without this file timy counts Claude time from them as before, at most 2 hours per turn.
+
 Next to them `colors.json` remembers which colour each project has in the charts. Neither prompts nor answers are stored. If you want to start over, delete the folder.
 
 ## Install
