@@ -1,7 +1,7 @@
 {
   "name": "timy",
   "version": "0.1.1",
-  "description": "Time per project from Claude sessions: active, typing and Claude working, in a band above the prompt and a pane",
+  "description": "Time per project from Claude sessions: active and Claude working, in a band above the prompt and a pane",
   "author": {
     "name": "Mats Boyens"
   },

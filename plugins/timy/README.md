@@ -2,7 +2,7 @@
 
 timy shows you how much time you spend per project in your Claude sessions. It is meant for yourself, not as a timesheet and not for control: the data stays on your machine and timy sends nothing anywhere.
 
-Above the prompt there is a band with the project, today's time and the day against your target. Click it to see today per project, `⤢` opens the pane. `/timy` opens the pane too, with today, the week and the month (keys `1`, `2`, `3`). In the desktop app the pane switches between a chart and a table (`g`, `t`), the terminal shows the table. The interface is in German, the pictures show demo data plus the session that took them.
+Above the prompt there is a band with the project, today's time and the day against your target. Click it to see today per project, `⤢` opens the pane. `/timy` opens the pane too, with today, the week and the month (keys `1`, `2`, `3`). In the desktop app the pane switches between a chart and a table (`g`, `t`), the terminal shows the table. A few lines at the foot of the pane say what the two times mean. The interface is in German, the pictures show demo data plus the session that took them.
 
 ![The band above the prompt](docs/band.png)
 
@@ -12,7 +12,9 @@ Above the prompt there is a band with the project, today's time and the day agai
 
 ## How it counts
 
-timy notes a few events per session: when you open it, type, send something and when Claude is done, and once a minute when Claude worked. Three times come out of that. `Aktiv` keeps counting for up to `idle_minutes` after you open the session, type or send something; Claude working on its own does not keep it going. Closing the session stops it at once. `Tippen` is the time in the prompt. `Claude` counts while a model request or a tool runs, subagents included, at most 15 minutes per run; a question to you or a plan waiting for your approval does not count, a turn that just stays open does not either.
+timy notes a few events per session: when you open it, type, send something and when Claude is done, and once a minute when Claude worked. Two times come out of that. `Aktiv` keeps counting for up to `idle_minutes` after you open the session, type or send something; Claude working on its own does not keep it going. Closing the session stops it at once. `Claude` counts while a model request or a tool runs, subagents included, at most 15 minutes per run; a question to you or a plan waiting for your approval does not count, a turn that just stays open does not either. timy also notes how long you type in the prompt, but does not show it.
+
+The count is rough and covers only what happens inside Claude. Meetings, calls and other apps are missing, so it does not replace the time you book in mite or MOCO.
 
 If two sessions run at the same time, the time counts in each of their projects. The table then shows under `Summe` how much of it was `parallel`, the number at the top counts it only once.
 

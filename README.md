@@ -18,7 +18,7 @@ Since Claude Code plugins are installed via public Git URLs, we need a publicly 
 |--------|-------------|
 | **elixir-genius** | Elixir/Phoenix/LiveView best practices, architecture patterns, and OTP guidance |
 | **workflows** | Development workflow skills |
-| **timy** | Time per project from Claude sessions: active, typing and Claude working, in a band above the prompt and a pane |
+| **timy** | Time per project from Claude sessions: active and Claude working, in a band above the prompt and a pane |
 
 ## Usage
 
