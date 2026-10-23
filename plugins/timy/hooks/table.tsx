@@ -20,6 +20,8 @@ export type Row = {
 
 type Column = { title: string; width: number; minBody: number }
 
+export const DOUBLE_LABEL = 'davon parallel'
+
 export const COLUMNS: Column[] = [
   { title: 'Aktiv', width: 8, minBody: 0 },
   { title: 'Claude', width: 8, minBody: 28 },
@@ -56,7 +58,7 @@ export const overlapOf = (summary: Summary, selected: number, claude: number | n
 
 const overlapRows = (overlap: Overlap | null): Row[] =>
   overlap !== null && (isShown(overlap.selected) || (overlap.claude !== null && isShown(overlap.claude)))
-    ? [{ key: 'overlap', name: 'davon parallel', values: [hm(overlap.selected), overlap.claude === null ? '' : hm(overlap.claude)], style: 'dim', isSum: true }]
+    ? [{ key: 'overlap', name: DOUBLE_LABEL, values: [hm(overlap.selected), overlap.claude === null ? '' : hm(overlap.claude)], style: 'dim', isSum: true }]
     : []
 
 export const summaryRows = (summary: Summary, folding: Folding, dots: ReadonlyMap<string, string> = new Map(), overlap: Overlap | null = null): Row[] => [

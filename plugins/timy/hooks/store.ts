@@ -8,7 +8,7 @@ export type Fs = {
   exists: (path: string) => Promise<boolean>
 }
 
-const DAY_START_HOUR = 4
+export const DAY_START_HOUR = 4
 
 const workDate = (t: number): Date => {
   const d = new Date(t)

@@ -70,7 +70,7 @@ const floorHour = (t: number) => {
 }
 
 const LABEL_GAP = 8
-const OVERLAP_LABEL = 'gleichzeitig'
+export const OVERLAP_LABEL = 'gleichzeitig'
 const ROW = 30
 const CLAUDE_GAP_MS = 60_000
 

@@ -1,11 +1,12 @@
 import type { RenderNode } from 'claude-code'
 
-import { barsSvg, colorOf, parallelRanges, timelineSvg } from './charts'
+import { OVERLAP_LABEL, barsSvg, colorOf, parallelRanges, timelineSvg } from './charts'
 import type { ChartDay, ChartRow, Colors } from './charts'
 import { hm, planPercent, shortProject, unionLength } from './model'
 import type { Span, Summary } from './model'
 import type { Tab } from './period'
-import { COLUMNS, allOpen, dayColumns, fullBar, isShown, overlapOf, summaryRows, table } from './table'
+import { DAY_START_HOUR } from './store'
+import { COLUMNS, DOUBLE_LABEL, allOpen, dayColumns, fullBar, isShown, overlapOf, summaryRows, table } from './table'
 import type { Folding, Row, Ui } from './table'
 
 export type View = 'grafik' | 'tabelle'
@@ -61,7 +62,7 @@ const helpSections = (idleMinutes: number, hasChart: boolean): (readonly [string
     [
       ['Aktiv', `Zeit, in der du in einer Session arbeitest, also tippst, liest oder kurz wartest. Nach ${idleMinutes} Minuten ohne Eingabe zählt Aktiv nicht weiter.`],
       ['Claude', 'Zeit, in der Claude rechnet oder Tools ausführt, auch in Subagents. Wartet ein Tool auf deine Freigabe, zählt das mit, eine Frage an dich nicht.'],
-      ['Summe', 'Laufen zwei Sessions gleichzeitig, zählt die Zeit bei beiden. „davon parallel“ zeigt, wie viel davon doppelt zählt, die große Zahl oben zählt sie nur einmal.'],
+      ['Summe', `Laufen zwei Sessions gleichzeitig, zählt die Zeit bei beiden. „${DOUBLE_LABEL}“ zeigt, wie viel davon doppelt zählt, die große Zahl oben zählt sie nur einmal.`],
       ['Soll', 'Dein Ziel für den Tag aus den Einstellungen. Ohne Eintrag zeigt timy keins.'],
     ],
   ],
@@ -70,7 +71,7 @@ const helpSections = (idleMinutes: number, hasChart: boolean): (readonly [string
         [
           'Grafik',
           [
-            ['Heute', 'Pro Projekt ein dicker Balken für Aktiv und darunter ein dünner für Claude. Die graue Zeile „gleichzeitig“ zeigt, wann mehrere Sessions liefen, der helle Strich steht auf jetzt.'],
+            ['Heute', `Pro Projekt ein dicker Balken für Aktiv und darunter ein dünner für Claude. Die graue Zeile „${OVERLAP_LABEL}“ zeigt, wann mehrere Sessions liefen, der helle Strich steht auf jetzt.`],
             ['Woche', 'Ein Balken pro Tag, nach Projekten gestapelt, darüber die Summe. Der Monat sieht genauso aus. Die gestrichelten Striche zeigen das Soll.'],
           ],
         ] as const,
@@ -164,7 +165,7 @@ const heading = (p: PaneInput, report: Report) => {
 const todayLine = (report: Report) => {
   const claude = unionLength(report.spans, 'claude', report.from, report.to)
   const parallel = sumOf(parallelRanges(report.spans, report.from, report.to).map(([a, b]) => b - a))
-  return parallel > 0 ? `Claude ${hm(claude)} · gleichzeitig ${hm(parallel)}` : `Claude ${hm(claude)}`
+  return parallel > 0 ? `Claude ${hm(claude)} · ${OVERLAP_LABEL} ${hm(parallel)}` : `Claude ${hm(claude)}`
 }
 
 const card = ({ ui, tab }: PaneInput, report: Report) => {
@@ -224,7 +225,7 @@ const LIMITS: readonly [string, readonly HelpEntry[]] = [
   'Grenzen',
   [
     ['Grob', 'timy misst nur, was in Claude passiert. Meetings, Calls und andere Apps fehlen, deshalb ersetzt timy nicht das Buchen deiner Zeiten.'],
-    ['Tag', 'Ein Tag beginnt um 4 Uhr, Arbeit nach Mitternacht zählt also noch zum Vortag.'],
+    ['Tag', `Ein Tag beginnt um ${DAY_START_HOUR} Uhr, Arbeit nach Mitternacht zählt also noch zum Vortag.`],
     ['Daten', 'Alles bleibt auf deinem Rechner im Datenordner von timy, nichts wird verschickt.'],
   ],
 ]
