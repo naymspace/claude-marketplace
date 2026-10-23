@@ -179,12 +179,15 @@ export const barsSvg = ({ days, rows, width }: { days: readonly ChartDay[]; rows
   const order = new Map(rows.map((row, i) => [row.project, i]))
   const colors = new Map(rows.map(row => [row.project, row.color]))
   const step = Math.max(1, Math.ceil(maxHours / 4))
+  const targets = new Set(days.map(day => day.target))
+  const gridHours = Array.from({ length: Math.floor(maxHours / step) + 1 }, (_, i) => i * step)
+  const gridLines = gridHours.filter(h => h === 0 || !targets.has(h * HOUR)).map(h => y(h * HOUR))
   const parts: string[] = []
-  for (let h = 0; h <= maxHours; h += step) {
-    parts.push(
-      `<line x1="${left}" y1="${y(h * HOUR)}" x2="${width - 8}" y2="${y(h * HOUR)}" stroke="${MUTED}" stroke-opacity="0.25"/>`,
-      `<text x="${left - 6}" y="${y(h * HOUR) + 4}" text-anchor="end" fill="${MUTED}" ${FONT}>${h}</text>`,
-    )
+  for (const h of gridHours) {
+    parts.push(`<text x="${left - 6}" y="${y(h * HOUR) + 4}" text-anchor="end" fill="${MUTED}" ${FONT}>${h}</text>`)
+  }
+  for (const line of gridLines) {
+    parts.push(`<line x1="${left}" y1="${line}" x2="${width - 8}" y2="${line}" stroke="${MUTED}" stroke-opacity="0.25"/>`)
   }
   days.forEach((day, i) => {
     const cx = left + slot * i + slot / 2
@@ -210,7 +213,9 @@ export const barsSvg = ({ days, rows, width }: { days: readonly ChartDay[]; rows
     if (totals[i]! > 0 && slot >= 30) {
       const above = y(totals[i]!) - 7
       const isOnTarget = day.target > totals[i]! && above - y(day.target) < 16
-      parts.push(`<text x="${cx}" y="${isOnTarget ? y(day.target) - 7 : above}" text-anchor="middle" fill="${MUTED}" ${FONT}>${hm(totals[i]!)}</text>`)
+      const crossed = gridLines.find(line => line > above - 12 && line < above + 3)
+      const labelY = isOnTarget ? y(day.target) - 7 : crossed === undefined ? above : crossed - 3
+      parts.push(`<text x="${cx}" y="${labelY}" text-anchor="middle" fill="${MUTED}" ${FONT}>${hm(totals[i]!)}</text>`)
     }
     const label = day.labels.find(text => slot >= text.length * CHAR_PX + 8) ?? day.labels.at(-1)!
     const isRoomy = slot >= label.length * CHAR_PX + 8

@@ -186,6 +186,22 @@ describe('barsSvg', () => {
     expect(target).not.toBe(grid)
   })
 
+  const gridYs = (svg: string) => [...svg.matchAll(/<line x1="[\d.]+" y1="([\d.]+)"[^>]*stroke-opacity/g)].map(m => Number(m[1]))
+
+  test('no grid line runs under the target line', () => {
+    const svg = barsSvg({ days, rows, width: 600 })
+    const targetY = Number(svg.match(/<line x1="[\d.]+" y1="([\d.]+)"[^>]*stroke-dasharray/)?.[1])
+    expect(gridYs(svg)).not.toContain(targetY)
+    expect(svg).toContain('>6</text>')
+  })
+
+  test('a day total does not sit on a grid line', () => {
+    const day = { labels: ['Fr 23.10.', 'Fr 23.', '23'], isMonday: false, target: 8 * HOUR, active: (5 / 3) * HOUR, byProject: [['beispiel/shop', (5 / 3) * HOUR]] as const }
+    const svg = barsSvg({ days: [day], rows, width: 600 })
+    const totalY = Number(svg.match(/<text x="[\d.]+" y="([\d.]+)"[^>]*>1:40<\/text>/)?.[1])
+    expect(gridYs(svg).some(line => line > totalY - 12 && line < totalY + 3)).toBe(false)
+  })
+
   test('parallel time counts once in the bar and its total', () => {
     const day = { labels: ['Di 13.10.', 'Di 13.', '13'], isMonday: false, target: 6 * HOUR }
     const parallel = { ...day, active: 4 * HOUR, byProject: [['beispiel/shop', 3 * HOUR], ['beispiel/blog', 2 * HOUR]] as const }
