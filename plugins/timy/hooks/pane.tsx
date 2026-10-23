@@ -50,7 +50,7 @@ const PAGE_KEY = { heute: 'day', woche: 'week', monat: 'month' } as const
 const TERM_WIDTH = 12
 const HELP_MAX_WIDTH = 100
 const HELP_STACK_WIDTH = 50
-const DIVIDER = '─'.repeat(300)
+const DIVIDER_SHARE = 0.6
 const JOINERS = new Set(['+', 'dann'])
 
 type HelpEntry = readonly [string, string]
@@ -78,10 +78,10 @@ const helpSections = (idleMinutes: number, hasChart: boolean): (readonly [string
     : []),
 ]
 
-const divider = ({ Box, Text }: Ui, key: string) => (
+const divider = ({ Box, Text }: Ui, key: string, columns: number) => (
   <Box key={key} marginY={1}>
     <Text dimColor wrap="truncate-end">
-      {DIVIDER}
+      {'─'.repeat(Math.max(1, Math.floor(columns * DIVIDER_SHARE)))}
     </Text>
   </Box>
 )
@@ -316,7 +316,7 @@ const help = (p: PaneInput) => {
         ...helpSections(p.idleMinutes, p.svg !== null).map(section => helpSection(p.ui, section, isStacked)),
         keys(p.ui, p.svg !== null),
         helpSection(p.ui, LIMITS, isStacked),
-      ].flatMap((section, i) => (i === 0 ? [section] : [divider(p.ui, `help-divider-${i}`), section]))}
+      ].flatMap((section, i) => (i === 0 ? [section] : [divider(p.ui, `help-divider-${i}`, Math.min(p.width, HELP_MAX_WIDTH)), section]))}
     </Box>
   )
 }
@@ -346,7 +346,7 @@ const perDay = ({ ui }: PaneInput, layout: Layout, report: Report) => {
     )
   return (
     <Box flexDirection="column">
-      {layout.isSplit ? null : divider(ui, 'per-day-divider')}
+      {layout.isSplit ? null : divider(ui, 'per-day-divider', layout.columnWidth)}
       <Box flexDirection="row" columnGap={2}>
         <Text bold>Pro Tag</Text>
         {sameTarget === null ? null : <Text dimColor>{`Soll ${hm(sameTarget)}`}</Text>}
@@ -397,7 +397,7 @@ export const renderPane = (p: PaneInput) => {
           {card(p, report)}
           {Svg !== null ? chart(p, Svg, report, rows) : null}
         </Box>
-        {Svg !== null ? divider(p.ui, 'chart-divider') : null}
+        {Svg !== null ? divider(p.ui, 'chart-divider', p.width) : null}
         {pair(p.ui, layout, summary, hasPerDay ? perDay(p, layout, report) : null)}
       </Box>
       {p.theirs}
