@@ -50,6 +50,7 @@ const PAGE_KEY = { heute: 'day', woche: 'week', monat: 'month' } as const
 const TERM_WIDTH = 12
 const HELP_MAX_WIDTH = 100
 const HELP_STACK_WIDTH = 50
+const DIVIDER = '─'.repeat(300)
 const JOINERS = new Set(['+', 'dann'])
 
 type HelpEntry = readonly [string, string]
@@ -76,6 +77,14 @@ const helpSections = (idleMinutes: number, hasChart: boolean): (readonly [string
       ]
     : []),
 ]
+
+const divider = ({ Box, Text }: Ui, key: string) => (
+  <Box key={key} marginY={1}>
+    <Text dimColor wrap="truncate-end">
+      {DIVIDER}
+    </Text>
+  </Box>
+)
 
 const sumOf = (values: Iterable<number>) => [...values].reduce((sum, ms) => sum + ms, 0)
 
@@ -302,10 +311,12 @@ const help = (p: PaneInput) => {
   const { Box } = p.ui
   const isStacked = p.width < HELP_STACK_WIDTH
   return (
-    <Box flexDirection="column" marginTop={1} rowGap={1} width={Math.min(p.width, HELP_MAX_WIDTH)}>
-      {helpSections(p.idleMinutes, p.svg !== null).map(section => helpSection(p.ui, section, isStacked))}
-      {keys(p.ui, p.svg !== null)}
-      {helpSection(p.ui, LIMITS, isStacked)}
+    <Box flexDirection="column" marginTop={1} width={Math.min(p.width, HELP_MAX_WIDTH)}>
+      {[
+        ...helpSections(p.idleMinutes, p.svg !== null).map(section => helpSection(p.ui, section, isStacked)),
+        keys(p.ui, p.svg !== null),
+        helpSection(p.ui, LIMITS, isStacked),
+      ].flatMap((section, i) => (i === 0 ? [section] : [divider(p.ui, `help-divider-${i}`), section]))}
     </Box>
   )
 }
@@ -334,7 +345,8 @@ const perDay = ({ ui }: PaneInput, layout: Layout, report: Report) => {
       }),
     )
   return (
-    <Box flexDirection="column" marginTop={layout.isSplit ? 0 : 1}>
+    <Box flexDirection="column">
+      {layout.isSplit ? null : divider(ui, 'per-day-divider')}
       <Box flexDirection="row" columnGap={2}>
         <Text bold>Pro Tag</Text>
         {sameTarget === null ? null : <Text dimColor>{`Soll ${hm(sameTarget)}`}</Text>}
@@ -383,8 +395,9 @@ export const renderPane = (p: PaneInput) => {
         <Box flexDirection="column" marginTop={1}>
           {heading(p, report)}
           {card(p, report)}
-          {Svg !== null ? <Box marginBottom={1}>{chart(p, Svg, report, rows)}</Box> : null}
+          {Svg !== null ? chart(p, Svg, report, rows) : null}
         </Box>
+        {Svg !== null ? divider(p.ui, 'chart-divider') : null}
         {pair(p.ui, layout, summary, hasPerDay ? perDay(p, layout, report) : null)}
       </Box>
       {p.theirs}

@@ -765,6 +765,7 @@ for (const surface of SURFACES) {
       expect(help.some(t => t.includes('Nach 3 Minuten ohne Eingabe'))).toBe(true)
       expect(help).toContain(' ctrl ')
       expect(help).toContain('Pane schließen')
+      expect(help.filter(t => t.startsWith('─')).length).toBeGreaterThanOrEqual(2)
       expect(help.some(t => t.includes('Meetings, Calls und andere Apps fehlen'))).toBe(true)
       expect(help).not.toContain('Aktiv Claude')
       await ui.press({ key: 'tab-woche' })
