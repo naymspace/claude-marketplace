@@ -47,7 +47,9 @@ const PX_PER_COLUMN = 8
 const SPLIT_MIN_WIDTH = 110
 const SPLIT_GAP = 3
 const PAGE_KEY = { heute: 'day', woche: 'week', monat: 'month' } as const
-const TERM_WIDTH = 10
+const TERM_WIDTH = 12
+const HELP_MAX_WIDTH = 100
+const JOINERS = new Set(['+', 'dann'])
 
 type HelpEntry = readonly [string, string]
 
@@ -67,29 +69,11 @@ const helpSections = (idleMinutes: number, hasChart: boolean): (readonly [string
           'Grafik',
           [
             ['Heute', 'Pro Projekt ein dicker Balken für Aktiv und darunter ein dünner für Claude. Die graue Zeile zeigt, wann Sessions parallel liefen, der helle Strich steht auf jetzt.'],
-            ['Woche', 'Woche und Monat zeigen einen Balken pro Tag, nach Projekten gestapelt, darüber die Summe. Die gestrichelte Linie ist das Soll.'],
+            ['Woche', 'Ein Balken pro Tag, nach Projekten gestapelt, darüber die Summe. Der Monat sieht genauso aus. Die gestrichelte Linie ist das Soll.'],
           ],
         ] as const,
       ]
     : []),
-  [
-    'Tasten',
-    [
-      ['1 2 3', 'Heute, Woche, Monat'],
-      ['4', 'diese Hilfe'],
-      ...(hasChart ? ([['g t', 'Grafik oder Tabelle']] as const) : []),
-      ['← →', 'Ein Klick blättert einen Zeitraum zurück oder vor.'],
-      ['Projekt', 'In der Tabelle von Woche und Monat klappt ein Klick auf ein Projekt seine Sessions auf.'],
-    ],
-  ],
-  [
-    'Grenzen',
-    [
-      ['Grob', 'timy misst nur, was in Claude passiert. Meetings, Calls und andere Apps fehlen, deshalb ersetzt timy nicht das Buchen deiner Zeiten.'],
-      ['Tag', 'Ein Tag beginnt um 4 Uhr, Arbeit nach Mitternacht zählt also noch zum Vortag.'],
-      ['Daten', 'Alles bleibt auf deinem Rechner im Datenordner von timy, nichts wird verschickt.'],
-    ],
-  ],
 ]
 
 const sumOf = (values: Iterable<number>) => [...values].reduce((sum, ms) => sum + ms, 0)
@@ -226,6 +210,66 @@ const chart = ({ ui, tab, width }: PaneInput, Svg: SvgElement, report: Report, r
   )
 }
 
+const LIMITS: readonly [string, readonly HelpEntry[]] = [
+  'Grenzen',
+  [
+    ['Grob', 'timy misst nur, was in Claude passiert. Meetings, Calls und andere Apps fehlen, deshalb ersetzt timy nicht das Buchen deiner Zeiten.'],
+    ['Tag', 'Ein Tag beginnt um 4 Uhr, Arbeit nach Mitternacht zählt also noch zum Vortag.'],
+    ['Daten', 'Alles bleibt auf deinem Rechner im Datenordner von timy, nichts wird verschickt.'],
+  ],
+]
+
+type KeyRow = readonly [readonly string[], string]
+
+const FOCUS_CHORD = ['ctrl', '+', 'x', 'dann', 'tab']
+
+const keyRows = (hasChart: boolean): KeyRow[] => [
+  [['1', '2', '3'], 'Heute, Woche, Monat'],
+  [['4'], 'Hilfe'],
+  ...(hasChart ? ([[['G', 'T'], 'Grafik, Tabelle']] as const) : []),
+  [['esc'], 'Pane schließen'],
+]
+
+const chord = ({ Box, Text }: Ui, tokens: readonly string[]) => (
+  <Box flexDirection="row" columnGap={1}>
+    {tokens.map((token, i) =>
+      JOINERS.has(token) ? (
+        <Text key={`${token}-${i}`} dimColor>
+          {token}
+        </Text>
+      ) : (
+        <Text key={`${token}-${i}`} backgroundColor="subtle" color="text">
+          {` ${token} `}
+        </Text>
+      ),
+    )}
+  </Box>
+)
+
+const keys = (ui: Ui, hasChart: boolean) => {
+  const { Box, Text } = ui
+  return (
+    <Box key="help-Tasten" flexDirection="column">
+      <Text bold>Tasten</Text>
+      <Text dimColor>Die Tasten wirken, wenn das Pane den Fokus hat. Dafür klickst du hinein oder drückst</Text>
+      <Box marginY={1}>{chord(ui, FOCUS_CHORD)}</Box>
+      <Box flexDirection="column" rowGap={1}>
+        {keyRows(hasChart).map(([tokens, label]) => (
+          <Box key={`help-keys-${tokens.join('')}`} flexDirection="row">
+            <Box width={TERM_WIDTH} flexShrink={0}>
+              {chord(ui, tokens)}
+            </Box>
+            <Text>{label}</Text>
+          </Box>
+        ))}
+      </Box>
+      <Box marginTop={1}>
+        <Text dimColor>Mit ← und → neben dem Titel blätterst du per Klick. In Woche und Monat klappt ein Klick auf ein Projekt in der Tabelle seine Sessions auf.</Text>
+      </Box>
+    </Box>
+  )
+}
+
 const note = ({ Box, Text }: Ui, [term, text]: HelpEntry) => (
   <Box key={`help-${term}`} flexDirection="row" alignItems="flex-start">
     <Box width={TERM_WIDTH} flexShrink={0}>
@@ -237,16 +281,23 @@ const note = ({ Box, Text }: Ui, [term, text]: HelpEntry) => (
   </Box>
 )
 
-const help = (p: PaneInput) => {
-  const { Box, Text } = p.ui
+const helpSection = (ui: Ui, [title, entries]: readonly [string, readonly HelpEntry[]]) => {
+  const { Box, Text } = ui
   return (
-    <Box flexDirection="column" marginTop={1} rowGap={1}>
-      {helpSections(p.idleMinutes, p.svg !== null).map(([title, entries]) => (
-        <Box key={`help-${title}`} flexDirection="column">
-          <Text bold>{title}</Text>
-          {entries.map(entry => note(p.ui, entry))}
-        </Box>
-      ))}
+    <Box key={`help-${title}`} flexDirection="column">
+      <Text bold>{title}</Text>
+      {entries.map(entry => note(ui, entry))}
+    </Box>
+  )
+}
+
+const help = (p: PaneInput) => {
+  const { Box } = p.ui
+  return (
+    <Box flexDirection="column" marginTop={1} rowGap={1} width={Math.min(p.width, HELP_MAX_WIDTH)}>
+      {helpSections(p.idleMinutes, p.svg !== null).map(section => helpSection(p.ui, section))}
+      {keys(p.ui, p.svg !== null)}
+      {helpSection(p.ui, LIMITS)}
     </Box>
   )
 }

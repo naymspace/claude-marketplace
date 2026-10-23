@@ -763,6 +763,8 @@ for (const surface of SURFACES) {
       await ui.press({ key: 'tab-hilfe' })
       const help = await textsOf(ui)
       expect(help.some(t => t.includes('Nach 3 Minuten ohne Eingabe'))).toBe(true)
+      expect(help).toContain(' ctrl ')
+      expect(help).toContain('Pane schließen')
       expect(help.some(t => t.includes('Meetings, Calls und andere Apps fehlen'))).toBe(true)
       expect(help).not.toContain('Aktiv Claude')
       await ui.press({ key: 'tab-woche' })
