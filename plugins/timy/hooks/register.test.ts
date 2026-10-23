@@ -767,6 +767,8 @@ for (const surface of SURFACES) {
       expect(help).toContain('Pane schließen')
       expect(help.some(t => t.includes('„davon parallel“ zeigt'))).toBe(true)
       expect(help.some(t => t.startsWith('Ein Tag beginnt um 4 Uhr'))).toBe(true)
+      expect(help.includes('Grafik, Tabelle')).toBe(surface === 'desktop')
+      expect(help.includes('Grafik')).toBe(surface === 'desktop')
       expect(help.filter(t => t.startsWith('─')).length).toBeGreaterThanOrEqual(2)
       expect(help.some(t => t.includes('Meetings, Calls und andere Apps fehlen'))).toBe(true)
       expect(help).not.toContain('Aktiv Claude')

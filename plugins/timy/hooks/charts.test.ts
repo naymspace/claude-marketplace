@@ -199,6 +199,7 @@ describe('barsSvg', () => {
     const day = { labels: ['Fr 23.10.', 'Fr 23.', '23'], isMonday: false, target: 8 * HOUR, active: (5 / 3) * HOUR, byProject: [['beispiel/shop', (5 / 3) * HOUR]] as const }
     const svg = barsSvg({ days: [day], rows, width: 600 })
     const totalY = Number(svg.match(/<text x="[\d.]+" y="([\d.]+)"[^>]*>1:40<\/text>/)?.[1])
+    expect(totalY).toBeGreaterThan(0)
     expect(gridYs(svg).some(line => line > totalY - 12 && line < totalY + 3)).toBe(false)
   })
 
