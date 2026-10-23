@@ -70,7 +70,21 @@ const floorHour = (t: number) => {
 }
 
 const LABEL_GAP = 8
+export const OVERLAP_LABEL = 'gleichzeitig'
 const ROW = 30
+const CLAUDE_GAP_MS = 60_000
+
+const blocks = (ranges: readonly Range[], gap: number): { range: Range; worked: number }[] => {
+  const joined: { range: Range; worked: number }[] = []
+  for (const [start, end] of ranges) {
+    const last = joined.at(-1)
+    if (last && start - last.range[1] < gap) {
+      last.range[1] = end
+      last.worked += end - start
+    } else joined.push({ range: [start, end], worked: end - start })
+  }
+  return joined
+}
 
 export const timelineSvg = ({
   spans,
@@ -94,7 +108,7 @@ export const timelineSvg = ({
   const start = floorHour(first)
   const end = Math.max(floorHour(last) + HOUR, start + HOUR)
   const parallel = parallelRanges(spans, from, to)
-  const longest = Math.max(0, ...rows.map(row => row.name.length), parallel.length > 0 ? 'parallel'.length : 0)
+  const longest = Math.max(0, ...rows.map(row => row.name.length), parallel.length > 0 ? OVERLAP_LABEL.length : 0)
   const labelWidth = Math.round(Math.min(140, width * 0.4, longest * CHAR_PX + LABEL_GAP))
   const fit = (text: string) =>
     text.length * CHAR_PX + LABEL_GAP <= labelWidth ? text : `${text.slice(0, Math.max(1, Math.floor((labelWidth - LABEL_GAP) / CHAR_PX) - 1))}…`
@@ -118,25 +132,25 @@ export const timelineSvg = ({
     const name = escapeXml(row.name)
     parts.push(`<text x="${labelWidth}" y="${y + 15}" text-anchor="end" fill="${color}" ${FONT}>${escapeXml(fit(row.name))}</text>`)
     const own = spans.filter(s => s.project === row.project)
-    for (const [kind, top, h, opacity, what] of [
-      ['selected', y + 5, 12, 1, 'aktiv'],
-      ['claude', y + 19, 6, 0.65, 'Claude'],
+    for (const [kind, top, h, opacity, what, gap] of [
+      ['selected', y + 5, 12, 1, 'aktiv', 0],
+      ['claude', y + 19, 6, 0.65, 'Claude', CLAUDE_GAP_MS],
     ] as const) {
-      for (const range of merge(clip(own.filter(s => s.kind === kind), start, end))) {
+      for (const { range, worked } of blocks(merge(clip(own.filter(s => s.kind === kind), start, end)), gap)) {
         parts.push(
           `<rect x="${x(range[0])}" y="${top}" width="${w(range)}" height="${h}" rx="2" fill="${color}" fill-opacity="${opacity}">` +
-            `<title>${name} · ${what} ${clock(range[0])}–${clock(range[1])} (${hm(range[1] - range[0])})</title></rect>`,
+            `<title>${name} · ${what} ${clock(range[0])}–${clock(range[1])} (${hm(worked)})</title></rect>`,
         )
       }
     }
   })
   if (parallel.length > 0) {
     const y = 20 + rows.length * ROW
-    parts.push(`<text x="${labelWidth}" y="${y + 15}" text-anchor="end" fill="${MUTED}" ${FONT}>parallel</text>`)
+    parts.push(`<text x="${labelWidth}" y="${y + 15}" text-anchor="end" fill="${MUTED}" ${FONT}>${OVERLAP_LABEL}</text>`)
     for (const range of parallel) {
       parts.push(
         `<rect x="${x(range[0])}" y="${y + 7}" width="${w(range)}" height="10" rx="2" fill="${MUTED}" fill-opacity="0.9">` +
-          `<title>parallel ${clock(range[0])}–${clock(range[1])} (${hm(range[1] - range[0])})</title></rect>`,
+          `<title>${OVERLAP_LABEL} ${clock(range[0])}–${clock(range[1])} (${hm(range[1] - range[0])})</title></rect>`,
       )
     }
   }
@@ -166,12 +180,15 @@ export const barsSvg = ({ days, rows, width }: { days: readonly ChartDay[]; rows
   const order = new Map(rows.map((row, i) => [row.project, i]))
   const colors = new Map(rows.map(row => [row.project, row.color]))
   const step = Math.max(1, Math.ceil(maxHours / 4))
+  const targets = new Set(days.map(day => day.target))
+  const gridHours = Array.from({ length: Math.floor(maxHours / step) + 1 }, (_, i) => i * step)
+  const gridLines = gridHours.filter(h => h === 0 || !targets.has(h * HOUR)).map(h => y(h * HOUR))
   const parts: string[] = []
-  for (let h = 0; h <= maxHours; h += step) {
-    parts.push(
-      `<line x1="${left}" y1="${y(h * HOUR)}" x2="${width - 8}" y2="${y(h * HOUR)}" stroke="${MUTED}" stroke-opacity="0.25"/>`,
-      `<text x="${left - 6}" y="${y(h * HOUR) + 4}" text-anchor="end" fill="${MUTED}" ${FONT}>${h}</text>`,
-    )
+  for (const h of gridHours) {
+    parts.push(`<text x="${left - 6}" y="${y(h * HOUR) + 4}" text-anchor="end" fill="${MUTED}" ${FONT}>${h}</text>`)
+  }
+  for (const line of gridLines) {
+    parts.push(`<line x1="${left}" y1="${line}" x2="${width - 8}" y2="${line}" stroke="${MUTED}" stroke-opacity="0.25"/>`)
   }
   days.forEach((day, i) => {
     const cx = left + slot * i + slot / 2
@@ -197,7 +214,9 @@ export const barsSvg = ({ days, rows, width }: { days: readonly ChartDay[]; rows
     if (totals[i]! > 0 && slot >= 30) {
       const above = y(totals[i]!) - 7
       const isOnTarget = day.target > totals[i]! && above - y(day.target) < 16
-      parts.push(`<text x="${cx}" y="${isOnTarget ? y(day.target) - 7 : above}" text-anchor="middle" fill="${MUTED}" ${FONT}>${hm(totals[i]!)}</text>`)
+      const crossed = gridLines.find(line => line > above - 12 && line < above + 3)
+      const labelY = isOnTarget ? y(day.target) - 7 : crossed === undefined ? above : crossed - 3
+      parts.push(`<text x="${cx}" y="${labelY}" text-anchor="middle" fill="${MUTED}" ${FONT}>${hm(totals[i]!)}</text>`)
     }
     const label = day.labels.find(text => slot >= text.length * CHAR_PX + 8) ?? day.labels.at(-1)!
     const isRoomy = slot >= label.length * CHAR_PX + 8

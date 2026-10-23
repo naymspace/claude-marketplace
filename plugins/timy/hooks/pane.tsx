@@ -1,11 +1,12 @@
 import type { RenderNode } from 'claude-code'
 
-import { barsSvg, colorOf, parallelRanges, timelineSvg } from './charts'
+import { OVERLAP_LABEL, barsSvg, colorOf, parallelRanges, timelineSvg } from './charts'
 import type { ChartDay, ChartRow, Colors } from './charts'
-import { fillColor, hm, planPercent, shortProject, unionLength } from './model'
+import { hm, planPercent, shortProject, unionLength } from './model'
 import type { Span, Summary } from './model'
 import type { Tab } from './period'
-import { COLUMNS, allOpen, dayColumns, fullBar, isShown, overlapOf, summaryRows, table } from './table'
+import { DAY_START_HOUR } from './store'
+import { COLUMNS, DOUBLE_LABEL, allOpen, dayColumns, fullBar, isShown, overlapOf, summaryRows, table } from './table'
 import type { Folding, Row, Ui } from './table'
 
 export type View = 'grafik' | 'tabelle'
@@ -28,6 +29,8 @@ type PaneInput = {
   svg: SvgElement | null
   width: number
   tab: Tab
+  isHelp: boolean
+  idleMinutes: number
   view: View
   offset: number
   isLoading: boolean
@@ -35,6 +38,7 @@ type PaneInput = {
   unfolded: ReadonlySet<string>
   theirs: RenderNode
   onTab: (tab: Tab) => Promise<void>
+  onHelp: () => void
   onView: (view: View) => void
   onPage: (step: number) => Promise<void>
   onToggle: (project: string) => void
@@ -44,6 +48,64 @@ const PX_PER_COLUMN = 8
 const SPLIT_MIN_WIDTH = 110
 const SPLIT_GAP = 3
 const PAGE_KEY = { heute: 'day', woche: 'week', monat: 'month' } as const
+const TERM_WIDTH = 12
+const HELP_MAX_WIDTH = 100
+const HELP_STACK_WIDTH = 50
+const DIVIDER_SHARE = 0.6
+const JOINERS = new Set(['+', 'dann'])
+
+type HelpEntry = readonly [string, string]
+
+const helpSections = (idleMinutes: number, hasChart: boolean): (readonly [string, readonly HelpEntry[]])[] => [
+  [
+    'Zeiten',
+    [
+      ['Aktiv', `Zeit, in der du in einer Session arbeitest, also tippst, liest oder kurz wartest. Nach ${idleMinutes} Minuten ohne Eingabe zählt Aktiv nicht weiter.`],
+      ['Claude', 'Zeit, in der Claude rechnet oder Tools ausführt, auch in Subagents. Wartet ein Tool auf deine Freigabe, zählt das mit, eine Frage an dich nicht.'],
+      ['Summe', `Laufen zwei Sessions gleichzeitig, zählt die Zeit bei beiden. „${DOUBLE_LABEL}“ zeigt, wie viel davon doppelt zählt, die große Zahl oben zählt sie nur einmal.`],
+      ['Soll', 'Dein Ziel für den Tag aus den Einstellungen. Ohne Eintrag zeigt timy keins.'],
+    ],
+  ],
+  ...(hasChart
+    ? [
+        [
+          'Grafik',
+          [
+            ['Heute', `Pro Projekt ein dicker Balken für Aktiv und darunter ein dünner für Claude. Die graue Zeile „${OVERLAP_LABEL}“ zeigt, wann mehrere Sessions liefen, der helle Strich steht auf jetzt.`],
+            ['Woche', 'Ein Balken pro Tag, nach Projekten gestapelt, darüber die Summe, wenn Platz ist. Der Monat sieht genauso aus. Die gestrichelten Striche zeigen das Soll.'],
+          ],
+        ] as const,
+      ]
+    : []),
+]
+
+const LIMITS: readonly [string, readonly HelpEntry[]] = [
+  'Grenzen',
+  [
+    ['Grob', 'timy misst nur, was in Claude passiert. Meetings, Calls und andere Apps fehlen, deshalb ersetzt timy nicht das Buchen deiner Zeiten.'],
+    ['Tag', `Ein Tag beginnt um ${DAY_START_HOUR} Uhr, Arbeit nach Mitternacht zählt also noch zum Vortag.`],
+    ['Daten', 'Alles bleibt auf deinem Rechner im Datenordner von timy, nichts wird verschickt.'],
+  ],
+]
+
+type KeyRow = readonly [readonly string[], string]
+
+const FOCUS_CHORD = ['ctrl', '+', 'x', 'dann', 'tab']
+
+const keyRows = (hasChart: boolean): KeyRow[] => [
+  [['1', '2', '3'], 'Heute, Woche, Monat'],
+  [['4'], 'Hilfe'],
+  ...(hasChart ? ([[['G', 'T'], 'Grafik, Tabelle']] as const) : []),
+  [['esc'], 'Pane schließen'],
+]
+
+const divider = ({ Box, Text }: Ui, key: string, columns: number) => (
+  <Box key={key} marginY={1}>
+    <Text dimColor wrap="truncate-end">
+      {'─'.repeat(Math.max(1, Math.floor(columns * DIVIDER_SHARE)))}
+    </Text>
+  </Box>
+)
 
 const sumOf = (values: Iterable<number>) => [...values].reduce((sum, ms) => sum + ms, 0)
 
@@ -73,22 +135,24 @@ const pair = ({ Box }: Ui, { isSplit }: Layout, left: RenderNode, right: RenderN
 
 const tabs = (p: PaneInput) => {
   const { Box, Button } = p.ui
-  const tabButton = (tab: Tab, label: string, hotkey: string) => (
+  const tabButton = (key: string, label: string, hotkey: string, isCurrent: boolean, onPress: () => unknown) => (
     <Button
-      key={`tab-${tab}`}
+      key={`tab-${key}`}
       label={label}
       hotkey={hotkey}
-      plain={p.tab !== tab ? true : undefined}
-      variant={p.tab === tab ? 'primary' : undefined}
-      dimColor={p.tab !== tab}
-      onPress={() => p.onTab(tab)}
+      plain={isCurrent ? undefined : true}
+      variant={isCurrent ? 'primary' : undefined}
+      dimColor={!isCurrent}
+      onPress={onPress}
     />
   )
+  const periodButton = (tab: Tab, label: string, hotkey: string) => tabButton(tab, label, hotkey, !p.isHelp && p.tab === tab, () => p.onTab(tab))
   return (
     <Box flexDirection="row" flexWrap="wrap" columnGap={3}>
-      {tabButton('heute', 'Heute', '1')}
-      {tabButton('woche', 'Woche', '2')}
-      {tabButton('monat', 'Monat', '3')}
+      {periodButton('heute', 'Heute', '1')}
+      {periodButton('woche', 'Woche', '2')}
+      {periodButton('monat', 'Monat', '3')}
+      {tabButton('hilfe', 'Hilfe', '4', p.isHelp, p.onHelp)}
     </Box>
   )
 }
@@ -121,7 +185,7 @@ const heading = (p: PaneInput, report: Report) => {
 const todayLine = (report: Report) => {
   const claude = unionLength(report.spans, 'claude', report.from, report.to)
   const parallel = sumOf(parallelRanges(report.spans, report.from, report.to).map(([a, b]) => b - a))
-  return parallel > 0 ? `Claude ${hm(claude)} · parallel ${hm(parallel)}` : `Claude ${hm(claude)}`
+  return parallel > 0 ? `Claude ${hm(claude)} · ${OVERLAP_LABEL} ${hm(parallel)}` : `Claude ${hm(claude)}`
 }
 
 const card = ({ ui, tab }: PaneInput, report: Report) => {
@@ -173,7 +237,88 @@ const chart = ({ ui, tab, width }: PaneInput, Svg: SvgElement, report: Report, r
           isInteractive
         />
       )}
-      {rows.length === 0 ? null : <Text dimColor>Dicker Balken aktiv, dünner Balken Claude, grau parallel, Strich jetzt</Text>}
+    </Box>
+  )
+}
+
+const chord = ({ Box, Text }: Ui, tokens: readonly string[]) => (
+  <Box flexDirection="row" columnGap={1}>
+    {tokens.map((token, i) =>
+      JOINERS.has(token) ? (
+        <Text key={`${token}-${i}`} dimColor>
+          {token}
+        </Text>
+      ) : (
+        <Text key={`${token}-${i}`} backgroundColor="subtle" color="text">
+          {` ${token} `}
+        </Text>
+      ),
+    )}
+  </Box>
+)
+
+const keys = (ui: Ui, hasChart: boolean) => {
+  const { Box, Text } = ui
+  return (
+    <Box key="help-Tasten" flexDirection="column">
+      <Text bold>Tasten</Text>
+      <Text dimColor>Die Tasten wirken, wenn das Pane den Fokus hat. Dafür klickst du hinein oder drückst:</Text>
+      <Box marginY={1}>{chord(ui, FOCUS_CHORD)}</Box>
+      <Box flexDirection="column" rowGap={1}>
+        {keyRows(hasChart).map(([tokens, label]) => (
+          <Box key={`help-keys-${tokens.join('')}`} flexDirection="row">
+            <Box width={TERM_WIDTH} flexShrink={0}>
+              {chord(ui, tokens)}
+            </Box>
+            <Text>{label}</Text>
+          </Box>
+        ))}
+      </Box>
+      <Box marginTop={1}>
+        <Text dimColor>Mit ← und → neben dem Titel blätterst du per Klick. In Woche und Monat klappt ein Klick auf ein Projekt in der Tabelle seine Sessions auf.</Text>
+      </Box>
+    </Box>
+  )
+}
+
+const note = ({ Box, Text }: Ui, [term, text]: HelpEntry, isStacked: boolean) =>
+  isStacked ? (
+    <Box key={`help-${term}`} flexDirection="column">
+      <Text dimColor>{term}</Text>
+      <Text>{text}</Text>
+    </Box>
+  ) : (
+    <Box key={`help-${term}`} flexDirection="row" alignItems="flex-start">
+      <Box width={TERM_WIDTH} flexShrink={0}>
+        <Text dimColor>{term}</Text>
+      </Box>
+      <Box flexShrink={1}>
+        <Text>{text}</Text>
+      </Box>
+    </Box>
+  )
+
+const helpSection = (ui: Ui, [title, entries]: readonly [string, readonly HelpEntry[]], isStacked: boolean) => {
+  const { Box, Text } = ui
+  return (
+    <Box key={`help-${title}`} flexDirection="column" rowGap={isStacked ? 1 : 0}>
+      <Text bold>{title}</Text>
+      {entries.map(entry => note(ui, entry, isStacked))}
+    </Box>
+  )
+}
+
+const help = (p: PaneInput) => {
+  const { Box } = p.ui
+  const isStacked = p.width < HELP_STACK_WIDTH
+  const width = Math.min(p.width, HELP_MAX_WIDTH)
+  return (
+    <Box flexDirection="column" marginTop={1} width={width}>
+      {[
+        ...helpSections(p.idleMinutes, p.svg !== null).map(section => helpSection(p.ui, section, isStacked)),
+        keys(p.ui, p.svg !== null),
+        helpSection(p.ui, LIMITS, isStacked),
+      ].flatMap((section, i) => (i === 0 ? [section] : [divider(p.ui, `help-divider-${i}`, width), section]))}
     </Box>
   )
 }
@@ -189,24 +334,26 @@ const perDay = ({ ui }: PaneInput, layout: Layout, report: Report) => {
   const hasTarget = report.days.some(day => day.target > 0)
   const targets = new Set(report.days.filter(day => day.active > 0).map(day => day.target))
   const sameTarget = targets.size === 1 && hasTarget ? [...targets][0]! : null
+  const isTargetShown = sameTarget === null && hasTarget
   const rows = report.days
     .filter(day => day.active > 0)
     .map(
       (day): Row => ({
         key: `day-${day.labels[0]}`,
         name: day.labels[0]!,
-        values: sameTarget === null ? [hm(day.active), hm(day.target)] : [hm(day.active)],
+        values: isTargetShown ? [hm(day.active), hm(day.target)] : [hm(day.active)],
         style: 'plain',
-        ...(day.target > 0 ? { bar: { actual: day.active, planned: day.target, color: fillColor(day.active, day.target) } } : {}),
+        ...(day.target > 0 ? { bar: { actual: day.active, planned: day.target } } : {}),
       }),
     )
   return (
-    <Box flexDirection="column" marginTop={layout.isSplit ? 0 : 1}>
+    <Box flexDirection="column">
+      {layout.isSplit ? null : divider(ui, 'per-day-divider', layout.columnWidth)}
       <Box flexDirection="row" columnGap={2}>
         <Text bold>Pro Tag</Text>
         {sameTarget === null ? null : <Text dimColor>{`Soll ${hm(sameTarget)}`}</Text>}
       </Box>
-      {table(ui, dayColumns(hasTarget, sameTarget === null && hasTarget), rows, layout.columnWidth, 1)}
+      {table(ui, dayColumns(isTargetShown), rows, layout.columnWidth, 1)}
     </Box>
   )
 }
@@ -215,6 +362,15 @@ export const renderPane = (p: PaneInput) => {
   const { Box, Text } = p.ui
   const Svg = p.view === 'grafik' ? p.svg : null
   const report = p.report
+  if (p.isHelp) {
+    return (
+      <Box flexDirection="column">
+        {tabs(p)}
+        {help(p)}
+        {p.theirs}
+      </Box>
+    )
+  }
   if (report === null) {
     return (
       <Box flexDirection="column">
@@ -241,8 +397,9 @@ export const renderPane = (p: PaneInput) => {
         <Box flexDirection="column" marginTop={1}>
           {heading(p, report)}
           {card(p, report)}
-          {Svg !== null ? <Box marginBottom={1}>{chart(p, Svg, report, rows)}</Box> : null}
+          {Svg !== null ? chart(p, Svg, report, rows) : null}
         </Box>
+        {Svg !== null ? divider(p.ui, 'chart-divider', p.width) : null}
         {pair(p.ui, layout, summary, hasPerDay ? perDay(p, layout, report) : null)}
       </Box>
       {p.theirs}

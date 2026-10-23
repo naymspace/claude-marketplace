@@ -1,7 +1,7 @@
 {
   "name": "timy",
-  "version": "0.1.0",
-  "description": "Time per project from Claude sessions: active, typing and Claude working, in a band above the prompt and a pane",
+  "version": "0.1.2",
+  "description": "Time per project from Claude sessions: active and Claude working, in a band above the prompt and a pane",
   "author": {
     "name": "Mats Boyens"
   },
@@ -12,8 +12,8 @@
     "idle_minutes": {
       "type": "number",
       "title": "Leerlauf-Grenze (Minuten)",
-      "description": "Nach so vielen Minuten ohne Eingabe zählt „Aktiv“ nicht weiter, außer Claude arbeitet gerade (dann bis zu 2 Stunden).",
-      "default": 5
+      "description": "Nach so vielen Minuten ohne Eingabe zählt „Aktiv“ nicht weiter, auch wenn Claude noch arbeitet.",
+      "default": 3
     },
     "data_dir": {
       "type": "string",

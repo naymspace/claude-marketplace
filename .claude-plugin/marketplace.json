@@ -23,8 +23,8 @@
       {
         "name": "timy",
         "source": "./plugins/timy",
-        "version": "0.1.0",
-        "description": "Time per project from Claude sessions: active, typing and Claude working, in a band above the prompt and a pane"
+        "version": "0.1.2",
+        "description": "Time per project from Claude sessions: active and Claude working, in a band above the prompt and a pane"
       }
     ]
   }

@@ -1,8 +1,8 @@
-export const EVENT_TYPES = ['attach', 'detach', 'edit', 'submit', 'turn-start', 'turn-end'] as const
+export const EVENT_TYPES = ['attach', 'detach', 'edit', 'submit', 'turn-start', 'turn-end', 'claude'] as const
 
 export type EventType = (typeof EVENT_TYPES)[number]
 
-export type TimyEvent = { t: number; type: EventType; project: string; session: string; title?: string; branch?: string }
+export type TimyEvent = { t: number; type: EventType; project: string; session: string; title?: string; branch?: string; ranges?: Range[] }
 
 type Kind = 'selected' | 'writing' | 'claude'
 
@@ -47,22 +47,21 @@ export const sessionSpans = (events: readonly TimyEvent[], idleMs: number, now: 
     if (end > start) spans.push({ kind, project, session, start, end })
   }
 
+  const work = sorted.flatMap(event => (event.type === 'claude' ? (event.ranges ?? []) : []))
+  for (const [start, end] of merge(work)) add('claude', start, end)
+
   let turnStart: number | null = null
   let attached = false
   let lastActivity: number | null = null
   let phaseStart: number | null = null
   let lastTyping = 0
 
-  const closeSelected = (until: number, openSince: number | null) => {
-    if (lastActivity === null) return
-    const idleEnd = Math.min(until, lastActivity + idleMs)
-    add('selected', lastActivity, idleEnd)
-    if (openSince !== null) add('selected', Math.max(openSince, idleEnd), Math.min(until, openSince + OPEN_CAP_MS))
+  const closeSelected = (until: number) => {
+    if (lastActivity !== null) add('selected', lastActivity, Math.min(until, lastActivity + idleMs))
   }
 
   for (const event of sorted) {
-    const openSince = turnStart
-    if (event.type === 'turn-start' && turnStart === null) turnStart = event.t
+    if (event.type === 'turn-start' && turnStart === null && work.length === 0) turnStart = event.t
     if (event.type === 'turn-end' && turnStart !== null) {
       add('claude', turnStart, Math.min(event.t, turnStart + OPEN_CAP_MS))
       turnStart = null
@@ -78,23 +77,22 @@ export const sessionSpans = (events: readonly TimyEvent[], idleMs: number, now: 
     }
 
     if (event.type === 'detach') {
-      if (attached) closeSelected(event.t, openSince)
+      if (attached) closeSelected(event.t)
       attached = false
       lastActivity = null
       continue
     }
 
-    if (event.type === 'turn-start') continue
-    if (event.type === 'turn-end' && !attached) continue
+    if (event.type !== 'attach' && event.type !== 'edit' && event.type !== 'submit') continue
 
-    if (attached) closeSelected(event.t, openSince)
+    if (attached) closeSelected(event.t)
     attached = true
     lastActivity = event.t
   }
 
   if (turnStart !== null) add('claude', turnStart, Math.min(closeAt, turnStart + OPEN_CAP_MS))
   if (phaseStart !== null) add('writing', phaseStart, Math.min(lastTyping + EDIT_SLICE_MS, closeAt))
-  if (attached) closeSelected(closeAt, turnStart)
+  if (attached) closeSelected(now)
 
   return spans
 }

@@ -21,9 +21,9 @@ const example: TimyEvent[] = [
 ]
 
 describe('sessionSpans', () => {
-  test('spec example: selected 12 min, claude 4 min, writing 3 min plus one slice', () => {
+  test('spec example: selected 8 min, claude 4 min, writing 3 min plus one slice', () => {
     const spans = sessionSpans(example, IDLE, at(10, 47))
-    expect(total(spans, 'selected')).toBe(12 * MIN)
+    expect(total(spans, 'selected')).toBe(8 * MIN)
     expect(total(spans, 'claude')).toBe(4 * MIN)
     expect(total(spans, 'writing')).toBe(3 * MIN + 10_000)
   })
@@ -53,7 +53,7 @@ describe('sessionSpans', () => {
     expect(total(spans, 'claude')).toBe(20 * MIN)
   })
 
-  test('a running turn keeps selected alive past the idle limit', () => {
+  test('a running turn does not keep selected alive past the idle limit', () => {
     const spans = sessionSpans(
       [
         ev('attach', at(10, 0)),
@@ -65,7 +65,7 @@ describe('sessionSpans', () => {
       IDLE,
       at(11, 0),
     )
-    expect(total(spans, 'selected')).toBe(43 * MIN)
+    expect(total(spans, 'selected')).toBe(6 * MIN)
     expect(total(spans, 'claude')).toBe(40 * MIN)
   })
 
@@ -75,13 +75,13 @@ describe('sessionSpans', () => {
         ev('attach', at(10, 0)),
         ev('submit', at(10, 1)),
         ev('turn-start', at(10, 1)),
-        ev('detach', at(10, 20)),
+        ev('detach', at(10, 3)),
         ev('turn-end', at(10, 41)),
       ],
       IDLE,
       at(11, 0),
     )
-    expect(total(spans, 'selected')).toBe(20 * MIN)
+    expect(total(spans, 'selected')).toBe(3 * MIN)
   })
 
   test('a turn that started while detached adds no selected time', () => {
@@ -93,18 +93,13 @@ describe('sessionSpans', () => {
     expect(total(spans, 'selected')).toBe(1 * MIN)
   })
 
-  test('a turn that started long after the last activity counts only from its start', () => {
+  test('turn start and end are not activity', () => {
     const spans = sessionSpans(
       [ev('attach', at(9, 0)), ev('turn-start', at(9, 30)), ev('turn-end', at(9, 50))],
       IDLE,
       at(10, 0),
     )
-    expect(total(spans, 'selected')).toBe(5 * MIN + 20 * MIN + 5 * MIN)
-  })
-
-  test('a still running turn counts selected up to now', () => {
-    const spans = sessionSpans([ev('attach', at(9, 0)), ev('turn-start', at(9, 1))], IDLE, at(9, 40))
-    expect(total(spans, 'selected')).toBe(40 * MIN)
+    expect(total(spans, 'selected')).toBe(5 * MIN)
   })
 
   test('typing without attach counts as selected', () => {
@@ -133,19 +128,42 @@ describe('sessionSpans', () => {
   })
 })
 
+describe('Claude work', () => {
+  const work = (t: number, ranges: [number, number][]): TimyEvent => ({ ...ev('claude', t), ranges })
+
+  test('Claude time is the union of the recorded work and ignores how long the turn stayed open', () => {
+    const spans = sessionSpans(
+      [
+        ev('turn-start', at(9, 0)),
+        work(at(9, 0), [[at(9, 0), at(9, 0, 20)], [at(9, 0, 30), at(9, 1)]]),
+        work(at(9, 0, 50), [[at(9, 0, 50), at(9, 1, 40)]]),
+        ev('turn-end', at(9, 30)),
+      ],
+      IDLE,
+      at(10, 0),
+    )
+    expect(total(spans, 'claude')).toBe(20_000 + 70_000)
+  })
+
+  test('a session without work lines keeps counting its turns', () => {
+    const spans = sessionSpans([ev('turn-start', at(9, 0)), ev('turn-end', at(9, 30))], IDLE, at(10, 0))
+    expect(total(spans, 'claude')).toBe(30 * MIN)
+  })
+})
+
 describe('sessionState', () => {
   test('counts selected time since the given start and is counting inside the idle limit', () => {
-    const state = sessionState(example, IDLE, at(10, 9), at(10, 2))
-    expect(state).toEqual({ selected: 7 * MIN, isCounting: true })
+    const state = sessionState(example, IDLE, at(10, 6), at(10, 2))
+    expect(state).toEqual({ selected: 4 * MIN, isCounting: true })
   })
 
   test('stops counting once the idle limit is reached', () => {
-    expect(sessionState(example, IDLE, at(10, 47), at(0, 0))).toEqual({ selected: 12 * MIN, isCounting: false })
+    expect(sessionState(example, IDLE, at(10, 47), at(0, 0))).toEqual({ selected: 8 * MIN, isCounting: false })
   })
 
-  test('keeps counting while a turn runs past the idle limit', () => {
+  test('stops counting at the idle limit while a turn still runs', () => {
     const long = [ev('attach', at(10, 0)), ev('submit', at(10, 0)), ev('turn-start', at(10, 0))]
-    expect(sessionState(long, IDLE, at(10, 20), at(0, 0))).toEqual({ selected: 20 * MIN, isCounting: true })
+    expect(sessionState(long, IDLE, at(10, 20), at(0, 0))).toEqual({ selected: 5 * MIN, isCounting: false })
   })
 
   test('is not counting after detach', () => {

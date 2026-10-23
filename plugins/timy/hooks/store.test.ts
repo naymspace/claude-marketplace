@@ -102,6 +102,12 @@ describe('SessionLog', () => {
     expect(times).toEqual([new Date(at(15, 10)).toISOString(), new Date(at(15, 11)).toISOString()])
   })
 
+  test('writes under its own name next to the session file', async () => {
+    const { fs, files } = memoryFs()
+    await new SessionLog(fs, '/data', 's1.claude').append(event(at(15, 10)))
+    expect(Object.keys(files)).toEqual(['/data/2026-10-15/s1.claude.jsonl'])
+  })
+
   test('a failed first load does not overwrite the day file', async () => {
     const existing = JSON.stringify({ ...event(at(15, 9)), t: new Date(at(15, 9)).toISOString() }) + '\n'
     const { fs, files } = memoryFs({ '/data/2026-10-15/s1.jsonl': existing })
@@ -148,5 +154,15 @@ describe('loadDays', () => {
     const { fs } = memoryFs({ '/data/2026-10-15/s1.jsonl': [valid, bogus, noSession].join('\n') + '\n' })
     const events = await loadDays(fs, '/data', ['2026-10-15'])
     expect(events).toHaveLength(1)
+  })
+
+  test('a Claude line counts only with valid ranges', async () => {
+    const t = new Date(at(15, 9)).toISOString()
+    const claude = (ranges: unknown) => JSON.stringify({ ...event(at(15, 9)), t, type: 'claude', ranges })
+    const { fs } = memoryFs({
+      '/data/2026-10-15/s1.claude.jsonl': [claude([[at(15, 9), at(15, 9) + 20_000]]), claude(undefined), claude([[at(15, 9), at(15, 9)]]), claude([['a', 'b']])].join('\n') + '\n',
+    })
+    const events = await loadDays(fs, '/data', ['2026-10-15'])
+    expect(events.map(e => e.ranges)).toEqual([[[at(15, 9), at(15, 9) + 20_000]]])
   })
 })

@@ -79,6 +79,17 @@ describe('timelineSvg', () => {
     expect(svg).toContain(`fill="${rows[1]!.color}" fill-opacity="1"><title>blog · aktiv 10:00–11:30 (1:30)</title>`)
   })
 
+  test('joins Claude stretches less than a minute apart and keeps their worked time', () => {
+    const work = [
+      ...Array.from({ length: 10 }, (_, i) => span('claude', 'a', at(9, 20 + i), at(9, 20 + i) + 30_000)),
+      span('claude', 'a', at(9, 32), at(9, 40)),
+    ]
+    const joined = timelineSvg({ spans: work, rows, from: at(4, 0), to: at(4, 0) + 24 * HOUR, now: at(11, 45), width: 600 })
+    expect(joined).toContain('<title>shop · Claude 09:20–09:29 (0:05)</title>')
+    expect(joined).toContain('<title>shop · Claude 09:32–09:40 (0:08)</title>')
+    expect(joined.match(/· Claude /g)).toHaveLength(2)
+  })
+
   test('marks now with a pulsing line', () => {
     expect(svg).toContain('<animate attributeName="stroke-opacity"')
     expect(svg).toContain('<title>jetzt 11:45</title>')
@@ -93,8 +104,8 @@ describe('timelineSvg', () => {
     for (const [x, w] of rects(svg)) expect(x + w).toBeLessThanOrEqual(600)
   })
 
-  test('adds a parallel row only when sessions overlap', () => {
-    expect(svg).not.toContain('>parallel</text>')
+  test('adds a gleichzeitig row only when sessions overlap', () => {
+    expect(svg).not.toContain('>gleichzeitig</text>')
     const both = timelineSvg({
       spans: [...spans, span('claude', 'a', at(10, 0), at(10, 20))],
       rows,
@@ -103,7 +114,7 @@ describe('timelineSvg', () => {
       now: at(11, 45),
       width: 600,
     })
-    expect(both).toContain('<title>parallel 10:00–10:20 (0:20)</title>')
+    expect(both).toContain('<title>gleichzeitig 10:00–10:20 (0:20)</title>')
   })
 
   const labelX = (svg: string, name: string) => Number(svg.match(new RegExp(`<text x="(\\d+)"[^>]*>${name}</text>`))?.[1])
@@ -173,6 +184,23 @@ describe('barsSvg', () => {
     const grid = svg.match(/<line [^>]*stroke="([^"]+)" stroke-opacity/)?.[1]
     const target = svg.match(/<line [^>]*stroke="([^"]+)"[^>]*stroke-dasharray/)?.[1]
     expect(target).not.toBe(grid)
+  })
+
+  const gridYs = (svg: string) => [...svg.matchAll(/<line x1="[\d.]+" y1="([\d.]+)"[^>]*stroke-opacity/g)].map(m => Number(m[1]))
+
+  test('no grid line runs under the target line', () => {
+    const svg = barsSvg({ days, rows, width: 600 })
+    const targetY = Number(svg.match(/<line x1="[\d.]+" y1="([\d.]+)"[^>]*stroke-dasharray/)?.[1])
+    expect(gridYs(svg)).not.toContain(targetY)
+    expect(svg).toContain('>6</text>')
+  })
+
+  test('a day total does not sit on a grid line', () => {
+    const day = { labels: ['Fr 23.10.', 'Fr 23.', '23'], isMonday: false, target: 8 * HOUR, active: (5 / 3) * HOUR, byProject: [['beispiel/shop', (5 / 3) * HOUR]] as const }
+    const svg = barsSvg({ days: [day], rows, width: 600 })
+    const totalY = Number(svg.match(/<text x="[\d.]+" y="([\d.]+)"[^>]*>1:40<\/text>/)?.[1])
+    expect(totalY).toBeGreaterThan(0)
+    expect(gridYs(svg).some(line => line > totalY - 12 && line < totalY + 3)).toBe(false)
   })
 
   test('parallel time counts once in the bar and its total', () => {
