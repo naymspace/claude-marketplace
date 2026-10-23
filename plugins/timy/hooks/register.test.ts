@@ -753,14 +753,20 @@ for (const surface of SURFACES) {
       expect(texts.some(t => t.includes('beispiel/'))).toBe(false)
     })
 
-    test('the pane explains its columns and how rough it counts', IDLE_5, async ($, on) => {
+    test('the help tab explains the times and limits instead of the report', async ($, on) => {
       engine(on, reportFiles)
       const clock = mock.clock(on, { now: at(15, 18, 0) })
       await $.session.start(startOf(surface))
       await clock.settle()
-      const texts = await textsOf(await openZeit($, surface))
-      expect(texts.some(t => t.startsWith('Zeit, in der du in einer Session arbeitest'))).toBe(true)
-      expect(texts.some(t => t.includes('Meetings, Calls und andere Apps fehlen'))).toBe(true)
+      const ui = await openZeit($, surface)
+      expect((await textsOf(ui)).some(t => t.includes('Meetings, Calls und andere Apps fehlen'))).toBe(false)
+      await ui.press({ key: 'tab-hilfe' })
+      const help = await textsOf(ui)
+      expect(help.some(t => t.includes('Nach 3 Minuten ohne Eingabe'))).toBe(true)
+      expect(help.some(t => t.includes('Meetings, Calls und andere Apps fehlen'))).toBe(true)
+      expect(help).not.toContain('Aktiv Claude')
+      await ui.press({ key: 'tab-woche' })
+      expect((await textsOf(ui)).some(t => t.includes('Meetings, Calls und andere Apps fehlen'))).toBe(false)
     })
 
     test('a session row keeps its time under the selected column', async ($, on) => {

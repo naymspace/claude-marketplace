@@ -28,6 +28,8 @@ type PaneInput = {
   svg: SvgElement | null
   width: number
   tab: Tab
+  isHelp: boolean
+  idleMinutes: number
   view: View
   offset: number
   isLoading: boolean
@@ -35,6 +37,7 @@ type PaneInput = {
   unfolded: ReadonlySet<string>
   theirs: RenderNode
   onTab: (tab: Tab) => Promise<void>
+  onHelp: () => void
   onView: (view: View) => void
   onPage: (step: number) => Promise<void>
   onToggle: (project: string) => void
@@ -44,15 +47,50 @@ const PX_PER_COLUMN = 8
 const SPLIT_MIN_WIDTH = 110
 const SPLIT_GAP = 3
 const PAGE_KEY = { heute: 'day', woche: 'week', monat: 'month' } as const
-const TERM_WIDTH = 8
-const NOTES = [
-  ['Aktiv', 'Zeit, in der du in einer Session arbeitest. Lesen und Pausen zählen bis zu ein paar Minuten nach deiner letzten Eingabe mit.'],
-  ['Claude', 'Zeit, in der Claude rechnet oder Tools ausführt, auch in Subagents. Wartet ein Tool auf deine Freigabe, zählt das mit.'],
+const TERM_WIDTH = 10
+
+type HelpEntry = readonly [string, string]
+
+const helpSections = (idleMinutes: number, hasChart: boolean): (readonly [string, readonly HelpEntry[]])[] => [
   [
-    'Hinweis',
-    'timy misst nur, was in Claude passiert. Meetings, Calls und andere Apps fehlen. Parallele Sessions zählen in der Summe mehrfach. Ersetzt nicht das Buchen deiner Zeiten.',
+    'Zeiten',
+    [
+      ['Aktiv', `Zeit, in der du in einer Session arbeitest, also tippst, liest oder kurz wartest. Nach ${idleMinutes} Minuten ohne Eingabe zählt Aktiv nicht weiter.`],
+      ['Claude', 'Zeit, in der Claude rechnet oder Tools ausführt, auch in Subagents. Wartet ein Tool auf deine Freigabe, zählt das mit, eine Frage an dich nicht.'],
+      ['Summe', 'Laufen zwei Sessions gleichzeitig, zählt die Zeit in beiden Projekten. „parallel“ zeigt, wie viel davon doppelt ist, die große Zahl oben zählt sie nur einmal.'],
+      ['Soll', 'Dein Ziel für den Tag aus den Einstellungen. Ohne Eintrag zeigt timy keins.'],
+    ],
   ],
-] as const
+  ...(hasChart
+    ? [
+        [
+          'Grafik',
+          [
+            ['Heute', 'Pro Projekt ein dicker Balken für Aktiv und darunter ein dünner für Claude. Die graue Zeile zeigt, wann Sessions parallel liefen, der helle Strich steht auf jetzt.'],
+            ['Woche', 'Woche und Monat zeigen einen Balken pro Tag, nach Projekten gestapelt, darüber die Summe. Die gestrichelte Linie ist das Soll.'],
+          ],
+        ] as const,
+      ]
+    : []),
+  [
+    'Tasten',
+    [
+      ['1 2 3', 'Heute, Woche, Monat'],
+      ['4', 'diese Hilfe'],
+      ...(hasChart ? ([['g t', 'Grafik oder Tabelle']] as const) : []),
+      ['← →', 'Ein Klick blättert einen Zeitraum zurück oder vor.'],
+      ['Projekt', 'In der Tabelle von Woche und Monat klappt ein Klick auf ein Projekt seine Sessions auf.'],
+    ],
+  ],
+  [
+    'Grenzen',
+    [
+      ['Grob', 'timy misst nur, was in Claude passiert. Meetings, Calls und andere Apps fehlen, deshalb ersetzt timy nicht das Buchen deiner Zeiten.'],
+      ['Tag', 'Ein Tag beginnt um 4 Uhr, Arbeit nach Mitternacht zählt also noch zum Vortag.'],
+      ['Daten', 'Alles bleibt auf deinem Rechner im Datenordner von timy, nichts wird verschickt.'],
+    ],
+  ],
+]
 
 const sumOf = (values: Iterable<number>) => [...values].reduce((sum, ms) => sum + ms, 0)
 
@@ -82,22 +120,24 @@ const pair = ({ Box }: Ui, { isSplit }: Layout, left: RenderNode, right: RenderN
 
 const tabs = (p: PaneInput) => {
   const { Box, Button } = p.ui
-  const tabButton = (tab: Tab, label: string, hotkey: string) => (
+  const tabButton = (key: string, label: string, hotkey: string, isCurrent: boolean, onPress: () => unknown) => (
     <Button
-      key={`tab-${tab}`}
+      key={`tab-${key}`}
       label={label}
       hotkey={hotkey}
-      plain={p.tab !== tab ? true : undefined}
-      variant={p.tab === tab ? 'primary' : undefined}
-      dimColor={p.tab !== tab}
-      onPress={() => p.onTab(tab)}
+      plain={isCurrent ? undefined : true}
+      variant={isCurrent ? 'primary' : undefined}
+      dimColor={!isCurrent}
+      onPress={onPress}
     />
   )
+  const periodButton = (tab: Tab, label: string, hotkey: string) => tabButton(tab, label, hotkey, !p.isHelp && p.tab === tab, () => p.onTab(tab))
   return (
     <Box flexDirection="row" flexWrap="wrap" columnGap={3}>
-      {tabButton('heute', 'Heute', '1')}
-      {tabButton('woche', 'Woche', '2')}
-      {tabButton('monat', 'Monat', '3')}
+      {periodButton('heute', 'Heute', '1')}
+      {periodButton('woche', 'Woche', '2')}
+      {periodButton('monat', 'Monat', '3')}
+      {tabButton('hilfe', 'Hilfe', '4', p.isHelp, p.onHelp)}
     </Box>
   )
 }
@@ -186,22 +226,27 @@ const chart = ({ ui, tab, width }: PaneInput, Svg: SvgElement, report: Report, r
   )
 }
 
-const note = ({ Box, Text }: Ui, [term, text]: readonly [string, string]) => (
-  <Box key={`note-${term}`} flexDirection="row" alignItems="flex-start">
+const note = ({ Box, Text }: Ui, [term, text]: HelpEntry) => (
+  <Box key={`help-${term}`} flexDirection="row" alignItems="flex-start">
     <Box width={TERM_WIDTH} flexShrink={0}>
       <Text dimColor>{term}</Text>
     </Box>
     <Box flexShrink={1}>
-      <Text dimColor>{text}</Text>
+      <Text>{text}</Text>
     </Box>
   </Box>
 )
 
-const glossary = (ui: Ui) => {
-  const { Box } = ui
+const help = (p: PaneInput) => {
+  const { Box, Text } = p.ui
   return (
-    <Box flexDirection="column" marginTop={2} rowGap={1}>
-      {NOTES.map(n => note(ui, n))}
+    <Box flexDirection="column" marginTop={1} rowGap={1}>
+      {helpSections(p.idleMinutes, p.svg !== null).map(([title, entries]) => (
+        <Box key={`help-${title}`} flexDirection="column">
+          <Text bold>{title}</Text>
+          {entries.map(entry => note(p.ui, entry))}
+        </Box>
+      ))}
     </Box>
   )
 }
@@ -244,6 +289,15 @@ export const renderPane = (p: PaneInput) => {
   const { Box, Text } = p.ui
   const Svg = p.view === 'grafik' ? p.svg : null
   const report = p.report
+  if (p.isHelp) {
+    return (
+      <Box flexDirection="column">
+        {tabs(p)}
+        {help(p)}
+        {p.theirs}
+      </Box>
+    )
+  }
   if (report === null) {
     return (
       <Box flexDirection="column">
@@ -273,7 +327,6 @@ export const renderPane = (p: PaneInput) => {
           {Svg !== null ? <Box marginBottom={1}>{chart(p, Svg, report, rows)}</Box> : null}
         </Box>
         {pair(p.ui, layout, summary, hasPerDay ? perDay(p, layout, report) : null)}
-        {glossary(p.ui)}
       </Box>
       {p.theirs}
     </Box>

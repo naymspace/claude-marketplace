@@ -57,13 +57,14 @@ const band: {
 
 const pane: {
   tab: Tab
+  isHelp: boolean
   view: View
   offset: number
   report: Report | null
   isLoading: boolean
   seen: Map<string, Report>
   unfolded: Set<string>
-} = { tab: 'heute', view: 'grafik', offset: 0, report: null, isLoading: false, seen: new Map(), unfolded: new Set() }
+} = { tab: 'heute', isHelp: false, view: 'grafik', offset: 0, report: null, isLoading: false, seen: new Map(), unfolded: new Set() }
 
 const fsOf = ($: EngineInterface): Fs => ({
   read: path => $.fs.read(path),
@@ -251,12 +252,14 @@ const refreshPane = async ($: EngineInterface) => {
 
 const switchTo = async ($: EngineInterface, tab: Tab, offset: number) => {
   const previous = { tab: pane.tab, offset: pane.offset, report: pane.report }
+  pane.isHelp = false
   pane.tab = tab
   pane.offset = offset
   await loadReport($, previous)
 }
 
 const openPane = async ($: EngineInterface) => {
+  pane.isHelp = false
   pane.tab = 'heute'
   pane.offset = 0
   await loadReport($)
@@ -478,6 +481,8 @@ export const register: Register = (on, options) => {
       svg: e.surface !== 'terminal' && 'Svg' in ui ? ui.Svg : null,
       width: e.props.bodyColumns,
       tab: pane.tab,
+      isHelp: pane.isHelp,
+      idleMinutes: settings.idleMinutes,
       view: pane.view,
       offset: pane.offset,
       isLoading: pane.isLoading,
@@ -485,6 +490,10 @@ export const register: Register = (on, options) => {
       unfolded: pane.unfolded,
       theirs,
       onTab: tab => switchTo($, tab, 0),
+      onHelp: () => {
+        pane.isHelp = true
+        redrawPane($)
+      },
       onView: view => {
         pane.view = view
         redrawPane($)
