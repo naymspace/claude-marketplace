@@ -72,7 +72,7 @@ const helpSections = (idleMinutes: number, hasChart: boolean): (readonly [string
           'Grafik',
           [
             ['Heute', `Pro Projekt ein dicker Balken für Aktiv und darunter ein dünner für Claude. Die graue Zeile „${OVERLAP_LABEL}“ zeigt, wann mehrere Sessions liefen, der helle Strich steht auf jetzt.`],
-            ['Woche', 'Ein Balken pro Tag, nach Projekten gestapelt, darüber die Summe. Der Monat sieht genauso aus. Die gestrichelten Striche zeigen das Soll.'],
+            ['Woche', 'Ein Balken pro Tag, nach Projekten gestapelt, darüber die Summe, wenn Platz ist. Der Monat sieht genauso aus. Die gestrichelten Striche zeigen das Soll.'],
           ],
         ] as const,
       ]
