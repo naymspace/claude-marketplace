@@ -79,6 +79,26 @@ const helpSections = (idleMinutes: number, hasChart: boolean): (readonly [string
     : []),
 ]
 
+const LIMITS: readonly [string, readonly HelpEntry[]] = [
+  'Grenzen',
+  [
+    ['Grob', 'timy misst nur, was in Claude passiert. Meetings, Calls und andere Apps fehlen, deshalb ersetzt timy nicht das Buchen deiner Zeiten.'],
+    ['Tag', `Ein Tag beginnt um ${DAY_START_HOUR} Uhr, Arbeit nach Mitternacht zählt also noch zum Vortag.`],
+    ['Daten', 'Alles bleibt auf deinem Rechner im Datenordner von timy, nichts wird verschickt.'],
+  ],
+]
+
+type KeyRow = readonly [readonly string[], string]
+
+const FOCUS_CHORD = ['ctrl', '+', 'x', 'dann', 'tab']
+
+const keyRows = (hasChart: boolean): KeyRow[] => [
+  [['1', '2', '3'], 'Heute, Woche, Monat'],
+  [['4'], 'Hilfe'],
+  ...(hasChart ? ([[['G', 'T'], 'Grafik, Tabelle']] as const) : []),
+  [['esc'], 'Pane schließen'],
+]
+
 const divider = ({ Box, Text }: Ui, key: string, columns: number) => (
   <Box key={key} marginY={1}>
     <Text dimColor wrap="truncate-end">
@@ -221,26 +241,6 @@ const chart = ({ ui, tab, width }: PaneInput, Svg: SvgElement, report: Report, r
   )
 }
 
-const LIMITS: readonly [string, readonly HelpEntry[]] = [
-  'Grenzen',
-  [
-    ['Grob', 'timy misst nur, was in Claude passiert. Meetings, Calls und andere Apps fehlen, deshalb ersetzt timy nicht das Buchen deiner Zeiten.'],
-    ['Tag', `Ein Tag beginnt um ${DAY_START_HOUR} Uhr, Arbeit nach Mitternacht zählt also noch zum Vortag.`],
-    ['Daten', 'Alles bleibt auf deinem Rechner im Datenordner von timy, nichts wird verschickt.'],
-  ],
-]
-
-type KeyRow = readonly [readonly string[], string]
-
-const FOCUS_CHORD = ['ctrl', '+', 'x', 'dann', 'tab']
-
-const keyRows = (hasChart: boolean): KeyRow[] => [
-  [['1', '2', '3'], 'Heute, Woche, Monat'],
-  [['4'], 'Hilfe'],
-  ...(hasChart ? ([[['G', 'T'], 'Grafik, Tabelle']] as const) : []),
-  [['esc'], 'Pane schließen'],
-]
-
 const chord = ({ Box, Text }: Ui, tokens: readonly string[]) => (
   <Box flexDirection="row" columnGap={1}>
     {tokens.map((token, i) =>
@@ -311,13 +311,14 @@ const helpSection = (ui: Ui, [title, entries]: readonly [string, readonly HelpEn
 const help = (p: PaneInput) => {
   const { Box } = p.ui
   const isStacked = p.width < HELP_STACK_WIDTH
+  const width = Math.min(p.width, HELP_MAX_WIDTH)
   return (
-    <Box flexDirection="column" marginTop={1} width={Math.min(p.width, HELP_MAX_WIDTH)}>
+    <Box flexDirection="column" marginTop={1} width={width}>
       {[
         ...helpSections(p.idleMinutes, p.svg !== null).map(section => helpSection(p.ui, section, isStacked)),
         keys(p.ui, p.svg !== null),
         helpSection(p.ui, LIMITS, isStacked),
-      ].flatMap((section, i) => (i === 0 ? [section] : [divider(p.ui, `help-divider-${i}`, Math.min(p.width, HELP_MAX_WIDTH)), section]))}
+      ].flatMap((section, i) => (i === 0 ? [section] : [divider(p.ui, `help-divider-${i}`, width), section]))}
     </Box>
   )
 }
