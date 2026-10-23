@@ -70,6 +70,7 @@ const floorHour = (t: number) => {
 }
 
 const LABEL_GAP = 8
+const OVERLAP_LABEL = 'gleichzeitig'
 const ROW = 30
 const CLAUDE_GAP_MS = 60_000
 
@@ -107,7 +108,7 @@ export const timelineSvg = ({
   const start = floorHour(first)
   const end = Math.max(floorHour(last) + HOUR, start + HOUR)
   const parallel = parallelRanges(spans, from, to)
-  const longest = Math.max(0, ...rows.map(row => row.name.length), parallel.length > 0 ? 'parallel'.length : 0)
+  const longest = Math.max(0, ...rows.map(row => row.name.length), parallel.length > 0 ? OVERLAP_LABEL.length : 0)
   const labelWidth = Math.round(Math.min(140, width * 0.4, longest * CHAR_PX + LABEL_GAP))
   const fit = (text: string) =>
     text.length * CHAR_PX + LABEL_GAP <= labelWidth ? text : `${text.slice(0, Math.max(1, Math.floor((labelWidth - LABEL_GAP) / CHAR_PX) - 1))}…`
@@ -145,11 +146,11 @@ export const timelineSvg = ({
   })
   if (parallel.length > 0) {
     const y = 20 + rows.length * ROW
-    parts.push(`<text x="${labelWidth}" y="${y + 15}" text-anchor="end" fill="${MUTED}" ${FONT}>parallel</text>`)
+    parts.push(`<text x="${labelWidth}" y="${y + 15}" text-anchor="end" fill="${MUTED}" ${FONT}>${OVERLAP_LABEL}</text>`)
     for (const range of parallel) {
       parts.push(
         `<rect x="${x(range[0])}" y="${y + 7}" width="${w(range)}" height="10" rx="2" fill="${MUTED}" fill-opacity="0.9">` +
-          `<title>parallel ${clock(range[0])}–${clock(range[1])} (${hm(range[1] - range[0])})</title></rect>`,
+          `<title>${OVERLAP_LABEL} ${clock(range[0])}–${clock(range[1])} (${hm(range[1] - range[0])})</title></rect>`,
       )
     }
   }

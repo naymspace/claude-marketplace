@@ -104,8 +104,8 @@ describe('timelineSvg', () => {
     for (const [x, w] of rects(svg)) expect(x + w).toBeLessThanOrEqual(600)
   })
 
-  test('adds a parallel row only when sessions overlap', () => {
-    expect(svg).not.toContain('>parallel</text>')
+  test('adds a gleichzeitig row only when sessions overlap', () => {
+    expect(svg).not.toContain('>gleichzeitig</text>')
     const both = timelineSvg({
       spans: [...spans, span('claude', 'a', at(10, 0), at(10, 20))],
       rows,
@@ -114,7 +114,7 @@ describe('timelineSvg', () => {
       now: at(11, 45),
       width: 600,
     })
-    expect(both).toContain('<title>parallel 10:00–10:20 (0:20)</title>')
+    expect(both).toContain('<title>gleichzeitig 10:00–10:20 (0:20)</title>')
   })
 
   const labelX = (svg: string, name: string) => Number(svg.match(new RegExp(`<text x="(\\d+)"[^>]*>${name}</text>`))?.[1])

@@ -1073,7 +1073,7 @@ describe('/timy charts', () => {
     expect(svg?.alt).toBe('Zeitleiste heute: shop 1:40, blog 0:50')
     const texts = await textsOf(ui)
     expect(texts).toEqual(expect.arrayContaining(['2:30', 'von 8:00 aktiv', '31 %', 'Claude 0:00']))
-    expect(texts.some(t => t.startsWith('Claude') && t.includes('parallel'))).toBe(false)
+    expect(texts.some(t => t.startsWith('Claude') && t.includes('gleichzeitig'))).toBe(false)
     expect(texts).not.toContain('aktiv')
     expect(texts.some(t => t.startsWith('● shop 1:40 '))).toBe(true)
     expect(texts.some(t => t.includes('#12 Login-Seite'))).toBe(false)
@@ -1116,7 +1116,7 @@ describe('/timy charts', () => {
     await $.session.start(startOf('desktop'))
     await clock.settle()
     const ui = await openZeit($, 'desktop', 80, 'grafik')
-    expect((await textsOf(ui)).some(t => /^Claude \d+:\d\d · parallel \d+:\d\d$/.test(t))).toBe(true)
+    expect((await textsOf(ui)).some(t => /^Claude \d+:\d\d · gleichzeitig \d+:\d\d$/.test(t))).toBe(true)
   })
 
   test('week on desktop shows one stacked bar per day with its target', { options: { ...IDLE_5.options, hours_per_weekday: '8,8,8,8,8' } }, async ($, on) => {

@@ -61,7 +61,7 @@ const helpSections = (idleMinutes: number, hasChart: boolean): (readonly [string
     [
       ['Aktiv', `Zeit, in der du in einer Session arbeitest, also tippst, liest oder kurz wartest. Nach ${idleMinutes} Minuten ohne Eingabe zählt Aktiv nicht weiter.`],
       ['Claude', 'Zeit, in der Claude rechnet oder Tools ausführt, auch in Subagents. Wartet ein Tool auf deine Freigabe, zählt das mit, eine Frage an dich nicht.'],
-      ['Summe', 'Laufen zwei Sessions gleichzeitig, zählt die Zeit in beiden Projekten. „parallel“ zeigt, wie viel davon doppelt ist, die große Zahl oben zählt sie nur einmal.'],
+      ['Summe', 'Laufen zwei Sessions gleichzeitig, zählt die Zeit bei beiden. „davon parallel“ zeigt, wie viel davon doppelt zählt, die große Zahl oben zählt sie nur einmal.'],
       ['Soll', 'Dein Ziel für den Tag aus den Einstellungen. Ohne Eintrag zeigt timy keins.'],
     ],
   ],
@@ -70,8 +70,8 @@ const helpSections = (idleMinutes: number, hasChart: boolean): (readonly [string
         [
           'Grafik',
           [
-            ['Heute', 'Pro Projekt ein dicker Balken für Aktiv und darunter ein dünner für Claude. Die graue Zeile zeigt, wann Sessions parallel liefen, der helle Strich steht auf jetzt.'],
-            ['Woche', 'Ein Balken pro Tag, nach Projekten gestapelt, darüber die Summe. Der Monat sieht genauso aus. Die gestrichelte Linie ist das Soll.'],
+            ['Heute', 'Pro Projekt ein dicker Balken für Aktiv und darunter ein dünner für Claude. Die graue Zeile „gleichzeitig“ zeigt, wann mehrere Sessions liefen, der helle Strich steht auf jetzt.'],
+            ['Woche', 'Ein Balken pro Tag, nach Projekten gestapelt, darüber die Summe. Der Monat sieht genauso aus. Die gestrichelten Striche zeigen das Soll.'],
           ],
         ] as const,
       ]
@@ -164,7 +164,7 @@ const heading = (p: PaneInput, report: Report) => {
 const todayLine = (report: Report) => {
   const claude = unionLength(report.spans, 'claude', report.from, report.to)
   const parallel = sumOf(parallelRanges(report.spans, report.from, report.to).map(([a, b]) => b - a))
-  return parallel > 0 ? `Claude ${hm(claude)} · parallel ${hm(parallel)}` : `Claude ${hm(claude)}`
+  return parallel > 0 ? `Claude ${hm(claude)} · gleichzeitig ${hm(parallel)}` : `Claude ${hm(claude)}`
 }
 
 const card = ({ ui, tab }: PaneInput, report: Report) => {
