@@ -1006,6 +1006,19 @@ for (const surface of SURFACES) {
       expect(texts.some(t => t.startsWith('shop 1:40 '))).toBe(true)
     })
 
+    test('an unreadable period opened from the help tab keeps the help', async ($, on) => {
+      const env = engine(on, reportFiles)
+      const clock = mock.clock(on, { now: at(15, 18, 0) })
+      await $.session.start(startOf(surface))
+      await clock.settle()
+      const ui = await openZeit($, surface)
+      await ui.press({ key: 'tab-hilfe' })
+      env.readFails = true
+      await ui.press({ key: 'tab-woche' })
+      expect(env.toasts).toContain('timy: Daten nicht lesbar')
+      expect((await textsOf(ui)).some(t => t.includes('Meetings, Calls und andere Apps fehlen'))).toBe(true)
+    })
+
     test('an unreadable earlier day keeps the shown day and its arrows', async ($, on) => {
       const env = engine(on, { ...reportFiles, [`${DIR}/2026-10-14/b.jsonl`]: busy(14, 'b', 'beispiel/shop', 9, 0, 30) })
       const clock = mock.clock(on, { now: at(15, 18, 0) })

@@ -211,7 +211,7 @@ const showReport = ($: EngineInterface, tab: Tab, offset: number, built: Report)
   redrawPane($)
 }
 
-type Shown = { tab: Tab; offset: number; report: Report | null }
+type Shown = { tab: Tab; isHelp: boolean; offset: number; report: Report | null }
 
 const loadReport = async ($: EngineInterface, previous: Shown | null = null) => {
   const ctx = recording.ctx
@@ -228,6 +228,7 @@ const loadReport = async ($: EngineInterface, previous: Shown | null = null) => 
     if (!isShowing(tab, offset)) return
     if (previous) {
       pane.tab = previous.tab
+      pane.isHelp = previous.isHelp
       pane.offset = previous.offset
       pane.report = previous.report
     }
@@ -251,7 +252,7 @@ const refreshPane = async ($: EngineInterface) => {
 }
 
 const switchTo = async ($: EngineInterface, tab: Tab, offset: number) => {
-  const previous = { tab: pane.tab, offset: pane.offset, report: pane.report }
+  const previous = { tab: pane.tab, isHelp: pane.isHelp, offset: pane.offset, report: pane.report }
   pane.isHelp = false
   pane.tab = tab
   pane.offset = offset
