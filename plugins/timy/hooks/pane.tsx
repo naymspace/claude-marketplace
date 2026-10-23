@@ -49,6 +49,7 @@ const SPLIT_GAP = 3
 const PAGE_KEY = { heute: 'day', woche: 'week', monat: 'month' } as const
 const TERM_WIDTH = 12
 const HELP_MAX_WIDTH = 100
+const HELP_STACK_WIDTH = 50
 const JOINERS = new Set(['+', 'dann'])
 
 type HelpEntry = readonly [string, string]
@@ -251,7 +252,7 @@ const keys = (ui: Ui, hasChart: boolean) => {
   return (
     <Box key="help-Tasten" flexDirection="column">
       <Text bold>Tasten</Text>
-      <Text dimColor>Die Tasten wirken, wenn das Pane den Fokus hat. Dafür klickst du hinein oder drückst</Text>
+      <Text dimColor>Die Tasten wirken, wenn das Pane den Fokus hat. Dafür klickst du hinein oder drückst:</Text>
       <Box marginY={1}>{chord(ui, FOCUS_CHORD)}</Box>
       <Box flexDirection="column" rowGap={1}>
         {keyRows(hasChart).map(([tokens, label]) => (
@@ -270,34 +271,41 @@ const keys = (ui: Ui, hasChart: boolean) => {
   )
 }
 
-const note = ({ Box, Text }: Ui, [term, text]: HelpEntry) => (
-  <Box key={`help-${term}`} flexDirection="row" alignItems="flex-start">
-    <Box width={TERM_WIDTH} flexShrink={0}>
+const note = ({ Box, Text }: Ui, [term, text]: HelpEntry, isStacked: boolean) =>
+  isStacked ? (
+    <Box key={`help-${term}`} flexDirection="column">
       <Text dimColor>{term}</Text>
-    </Box>
-    <Box flexShrink={1}>
       <Text>{text}</Text>
     </Box>
-  </Box>
-)
+  ) : (
+    <Box key={`help-${term}`} flexDirection="row" alignItems="flex-start">
+      <Box width={TERM_WIDTH} flexShrink={0}>
+        <Text dimColor>{term}</Text>
+      </Box>
+      <Box flexShrink={1}>
+        <Text>{text}</Text>
+      </Box>
+    </Box>
+  )
 
-const helpSection = (ui: Ui, [title, entries]: readonly [string, readonly HelpEntry[]]) => {
+const helpSection = (ui: Ui, [title, entries]: readonly [string, readonly HelpEntry[]], isStacked: boolean) => {
   const { Box, Text } = ui
   return (
-    <Box key={`help-${title}`} flexDirection="column">
+    <Box key={`help-${title}`} flexDirection="column" rowGap={isStacked ? 1 : 0}>
       <Text bold>{title}</Text>
-      {entries.map(entry => note(ui, entry))}
+      {entries.map(entry => note(ui, entry, isStacked))}
     </Box>
   )
 }
 
 const help = (p: PaneInput) => {
   const { Box } = p.ui
+  const isStacked = p.width < HELP_STACK_WIDTH
   return (
     <Box flexDirection="column" marginTop={1} rowGap={1} width={Math.min(p.width, HELP_MAX_WIDTH)}>
-      {helpSections(p.idleMinutes, p.svg !== null).map(section => helpSection(p.ui, section))}
+      {helpSections(p.idleMinutes, p.svg !== null).map(section => helpSection(p.ui, section, isStacked))}
       {keys(p.ui, p.svg !== null)}
-      {helpSection(p.ui, LIMITS)}
+      {helpSection(p.ui, LIMITS, isStacked)}
     </Box>
   )
 }

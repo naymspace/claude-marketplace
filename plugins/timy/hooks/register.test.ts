@@ -771,6 +771,26 @@ for (const surface of SURFACES) {
       expect((await textsOf(ui)).some(t => t.includes('Meetings, Calls und andere Apps fehlen'))).toBe(false)
     })
 
+    for (const [columns, direction] of [
+      [35, 'column'],
+      [80, 'row'],
+    ] as const) {
+      test(`a help tab of ${columns} columns lays out each term and its text as a ${direction}`, async ($, on) => {
+        engine(on, reportFiles)
+        const clock = mock.clock(on, { now: at(15, 18, 0) })
+        await $.session.start(startOf(surface))
+        await clock.settle()
+        const ui = await openZeit($, surface, columns)
+        await ui.press({ key: 'tab-hilfe' })
+        const boxes = (await ui.findAll({ type: 'Box' })) as unknown as Found[]
+        const entry = boxes.find(box => {
+          const text = box.children.flatMap(flat).join('')
+          return text.startsWith('Aktiv') && text.endsWith('nicht weiter.')
+        })
+        expect(entry?.props.flexDirection).toBe(direction)
+      })
+    }
+
     test('a session row keeps its time under the selected column', async ($, on) => {
       engine(on, reportFiles)
       const clock = mock.clock(on, { now: at(15, 18, 0) })
