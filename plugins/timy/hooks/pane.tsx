@@ -182,7 +182,6 @@ const chart = ({ ui, tab, width }: PaneInput, Svg: SvgElement, report: Report, r
           isInteractive
         />
       )}
-      {rows.length === 0 ? null : <Text dimColor>Dicker Balken aktiv, dünner Balken Claude, grau parallel, Strich jetzt</Text>}
     </Box>
   )
 }
