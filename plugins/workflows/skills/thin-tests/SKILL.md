@@ -24,7 +24,7 @@ Read-only. Split the files into groups that can be judged together, typically:
 - security, authorization, isolation
 - per-entity tests (one file per model, resource, endpoint, component)
 
-Dispatch one subagent per group, in one message. Each brief names its files, lists every other test file of the target for overlap checks, points at `criteria.md`, and asks for: per file and per test group (the framework's `describe`, `context`, class or module) the lines, test count, what it protects, overlap, regression signal from git history, verdict with a one-line reason; then gaps, proposals for **matrix** tests, removable lines, and the 3–5 most important tests.
+Dispatch one subagent per group, in one message. Each brief names its files, lists every other test file of the target for overlap checks, points at `criteria.md`, and asks for: per file and per test group (the framework's `describe` (ExUnit, RSpec, Jest), `context`, class or module) the lines, test count, what it protects, overlap, regression signal from git history, verdict with a one-line reason; then gaps, proposals for **matrix** tests, removable lines, and the 3–5 most important tests.
 
 Done when every test group of every file has a verdict.
 
